@@ -24,12 +24,13 @@ dev = [
     "pytest==7.1.2",
 ]
 
-[project.scripts]
-# Note, add entrypoint name to scripts/completions/install.py to include CLI completion
-tassa = "tassa:entrypoint"
+#[project.scripts]
+## Note, add entrypoint name to scripts/completions/install.py to include CLI completion
+#tassa = "tassa:entrypoint"
 
 [tool.setuptools.packages.find]
-include = ["cmx*", "tassa*"]
+#include = ["cmx*", "tassa*"]
+include = ["cmx*"]
 
 [tool.setuptools.package-data]
 "*" = ["*.json"]

@@ -22,6 +22,7 @@ from tassa.schemas import (
     Pivot,
     div,
     Paragraph,
+    # Instances,
 )
 
 from tqdm import tqdm
@@ -96,10 +97,10 @@ def show_heatmap():
             )
         ],
         style={"width": "100vw", "height": "900px"},
-        cameras=[],
     )
 
-    event = yield Frame(Set(scene))
+    event = yield Set(scene)
+    assert event == "INIT";
 
     sleep(2.0)
 
