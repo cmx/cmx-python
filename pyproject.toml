@@ -29,7 +29,6 @@ dev = [
 #tassa = "tassa:entrypoint"
 
 [tool.setuptools.packages.find]
-#include = ["cmx*", "tassa*"]
 include = ["cmx*"]
 
 [tool.setuptools.package-data]
@@ -44,9 +43,9 @@ line-length = 120
 max-line-length = 120
 generated-members = ["numpy.*", "torch.*", "cv2.*", "cv.*"]
 good-names-rgxs = "^[_a-zA-Z][_a-z0-9]?$"
-ignore-paths = ["scripts/colmap2nerf.py"]
+ignore-paths = []
 jobs = 0
-ignored-classes = ["TensorDataclass"]
+ignored-classes = []
 
 disable = [
     "duplicate-code",
