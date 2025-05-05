@@ -60,19 +60,18 @@ def test_table():
 
 
 def test_image():
-    import gym
-    env = gym.make('FetchReach-v1')
-    env.reset()
-    img = env.render('rgb_array')
+    from skimage import data
+
+    img = data.astronaut()
     doc.image(img)
     print(doc._md)
     doc.flush()
 
 
 def test_image_src():
-    import gym
-    env = gym.make('FetchReach-v1')
-    img = env.render('rgb_array')
+    from skimage import data
+
+    img = data.camera()
     doc.image(img, f"figures/reach.png?ts={doc.now()}")
     print(doc._md)
     doc.flush()
@@ -83,10 +82,9 @@ def test_figure_row():
     ## Test Figure Row
     """
     with doc:
-        import gym
-        env = gym.make('FetchReach-v1')
+        from skimage import data
 
-    img = env.render('rgb_array')
+        img = data.coins()
 
     with doc, doc.table() as table:
         with table.figure_row() as row:

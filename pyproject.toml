@@ -4,18 +4,18 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "cmx"
-version = "0.0.23"
+version = "0.0.46"
 description = ""
-readme = "README.md"
 license = { text = "MIT" }
+readme = "README.md"
 requires-python = ">=3.8.6"
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Programming Language :: Python",
 ]
 dependencies = [
+    "functional_notations"
 ]
-
 [project.optional-dependencies]
 # Development packages
 dev = [
