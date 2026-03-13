@@ -1,0 +1,10 @@
+sphinx==7.1.2
+furo
+myst-parser
+sphinx-autobuild
+sphinx-copybutton
+sphinx-design
+waterbear
+pandas
+pillow
+matplotlib
