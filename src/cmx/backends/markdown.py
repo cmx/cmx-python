@@ -1,9 +1,7 @@
 import os
 from copy import deepcopy
 
-from ..utils import get_block, is_subclass, to_snake
-from functional_notations import _F
-from ml_logger import ML_Logger
+from ..utils import get_block, is_subclass, to_snake, SimpleLogger, _F
 
 from . import components
 from ..utils import dedent
@@ -18,7 +16,7 @@ def video(frames=None, *, src, window, **kwargs):
     :param kwargs:
     :return:
     """
-    file_path, *query_strs = src.split('?')
+    file_path, *query_strs = src.split("?")
     if frames is not None:
         window.logger.save_video(frames, file_path)
     if file_path.endswith("gif"):
@@ -37,7 +35,7 @@ class Figure(components.Figure):
 class Image(components.Image):
     def __init__(self, image=None, src=None, *, window, normalize=False, **kwargs):
         if src is not None:
-            file_path, *query_strs = src.split('?')
+            file_path, *query_strs = src.split("?")
             if image is not None:
                 window.logger.save_image(image, file_path, normalize=normalize)
             super().__init__(src=src, **kwargs)
@@ -47,13 +45,13 @@ class Image(components.Image):
 
 class Savefig(components.Figure):
     def __init__(self, key, caption=None, width=None, height=None, zoom=None, window=None, **kwargs):
-        file_path, *_ = key.split('?')
+        file_path, *_ = key.split("?")
         super().__init__(src=key, width=width, height=height, caption=caption, zoom=zoom, window=window, **kwargs)
         self.window.logger.savefig(file_path, **kwargs)
 
 
-USER = os.environ.get('USER', None)
-PWD = os.environ.get('PWD', None)
+USER = os.environ.get("USER", None)
+PWD = os.environ.get("PWD", None)
 
 
 class CommonMark(components.Article):
@@ -70,6 +68,7 @@ class CommonMark(components.Article):
         similar issues.
         """
         from contextlib import ExitStack
+
         return ExitStack()
 
     @property
@@ -94,8 +93,8 @@ class CommonMark(components.Article):
             this is similar to a figure object as in matplotlib.
         """
         super().__init__(window={to_snake(k): v for k, v in globals().items() if is_subclass(v, components.Component)})
-        self.window['video'] = video
-        self.window.logger = logger or ML_Logger(root=root, prefix=prefix)
+        self.window["video"] = video
+        self.window.logger = logger or SimpleLogger(root=root, prefix=prefix)
 
         # if logger.root_dir:
         #     cprint(f"cmx root directory: {logger.root_dir}", color="green")
@@ -115,6 +114,7 @@ class CommonMark(components.Article):
 
             from termcolor import cprint
             from urllib import parse
+
             if self.window.logger.root.startswith("http"):
                 # just print the path, README.md should just show.
                 cprint("File output at " + self.window.logger.get_dash_url() + " " + self.__filename, "green")
@@ -125,6 +125,7 @@ class CommonMark(components.Article):
     def new(self, filename=None, **kwargs):
         if filename:
             import os
+
             filename = os.path.abspath(filename)
 
         doc = deepcopy(self).config(filename=filename, **kwargs)
@@ -134,6 +135,7 @@ class CommonMark(components.Article):
     def filename(self):
         if self.__filename is None:
             import inspect
+
             filename = "cmx/"
             frame = inspect.currentframe()
             while "cmx/" in filename or "importlib" in filename or "contextlib" in filename:
@@ -141,7 +143,7 @@ class CommonMark(components.Article):
                 filename, line_number, function_name, lines, index = inspect.getframeinfo(frame)
 
             # todo: '/__init__.py' instead?
-            if filename.endswith('__init__.py'):
+            if filename.endswith("__init__.py"):
                 self.__filename = filename[:-11] + "README.md"
             else:
                 self.__filename = filename.replace(".py", ".md")
@@ -152,6 +154,7 @@ class CommonMark(components.Article):
 
             from termcolor import cprint
             from urllib import parse
+
             cprint("File output at file://" + parse.quote(self.__filename), "green")
 
         return self.__filename
@@ -172,11 +175,25 @@ class CommonMark(components.Article):
         return self
 
     def __matmul__(self, string_or_array):
+        """Support prefix @ syntax: doc @ "text" or doc @ '''text'''"""
         if isinstance(string_or_array, tuple):
             string, *rest = string_or_array
             return self(string, *rest)
 
         return self(string_or_array)
+
+    def __ror__(self, string_or_array):
+        """Support postfix pipe syntax: "text" | doc or '''text''' | doc"""
+        if isinstance(string_or_array, tuple):
+            string, *rest = string_or_array
+            return self(string, *rest)
+
+        return self(string_or_array)
+
+    def __or__(self, other):
+        """Support pipe operator for future extensions"""
+        # This allows for potential chaining like: doc | other_processor
+        raise NotImplementedError("Left-side pipe operator not yet implemented")
 
     md = __call__
 
@@ -200,13 +217,16 @@ class CommonMark(components.Article):
     def yaml(self, data=None, **kwargs):
         def _yaml(data, **kwargs):
             import yaml
+
             s = yaml.dump(data).rstrip()
             return self.pre(s, lang="yaml")
 
         return _F(_yaml, name="yaml")
 
     @property
-    def csv(self, ):
+    def csv(
+        self,
+    ):
         def _csv(csv, show_index=False, **kwargs):
             return self.children.append(components.Table(csv, show_index=show_index, **kwargs))
 
@@ -225,6 +245,7 @@ class CommonMark(components.Article):
 
     def __enter__(self):
         import inspect
+
         assert self.filename, "make sure that file is already set."
 
         prior_frame = inspect.currentframe().f_back
@@ -235,7 +256,7 @@ class CommonMark(components.Article):
             # todo: change to self.code(, lang="python", ...)
             self.children.append(components.Pre(dedent(text).rstrip(), lang="python"))
         except FileNotFoundError:
-            print('in iPython session')
+            print("in iPython session")
         return self
 
     __exit__ = flush
@@ -243,9 +264,11 @@ class CommonMark(components.Article):
 
 class Github(CommonMark):
     """uses tables for the layout"""
+
     pass
 
 
 class Gist(CommonMark):
     """saves everything inside a folder"""
+
     pass

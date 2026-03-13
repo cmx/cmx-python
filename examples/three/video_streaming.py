@@ -61,11 +61,17 @@ def show_heatmap():
             small = frame[::-10, ::10, :]
             event = yield Frame(
                 Update(
-                    Image(small, width="900px", height="600.px", key="video", style={"position": "absolute", "left": 100, "top": 100}),
+                    Image(
+                        small,
+                        width="900px",
+                        height="600.px",
+                        key="video",
+                        style={"position": "absolute", "left": 100, "top": 100},
+                    ),
                 )
             )
             sleep(0.005)
 
         if event == "TERMINAL":
-            print('Got Termination event from client')
+            print("Got Termination event from client")
             break

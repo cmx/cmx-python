@@ -5,8 +5,26 @@ import numpy as np
 
 from tassa import Tassa
 from tassa.events import Set, Update
-from tassa.schemas import Page, Header1, Paragraph, ImageCls, Text, InputBox, Slider, ImageUpload, Button, \
-    Scene, Pcd, Ply, Glb, PointCloud, div, Gripper, Pivot, Movable
+from tassa.schemas import (
+    Page,
+    Header1,
+    Paragraph,
+    ImageCls,
+    Text,
+    InputBox,
+    Slider,
+    ImageUpload,
+    Button,
+    Scene,
+    Pcd,
+    Ply,
+    Glb,
+    PointCloud,
+    div,
+    Gripper,
+    Pivot,
+    Movable,
+)
 
 doc = Tassa("ws://localhost:8012", reconnect=True)
 
@@ -17,10 +35,14 @@ def show_heatmap():
     page = Page(
         Scene(
             Movable(
-                Ply(src="https://escher.ge.ngrok.io/files/william/nerfstudio/correspondences/2023-01-20_23-08-27/orange/mask_in.ply",
-                    rotation=[-.5 * np.pi, 0, -.5 * np.pi], position=[-.0, 1.8, 0], key="orange"),
+                Ply(
+                    src="https://escher.ge.ngrok.io/files/william/nerfstudio/correspondences/2023-01-20_23-08-27/orange/mask_in.ply",
+                    rotation=[-0.5 * np.pi, 0, -0.5 * np.pi],
+                    position=[-0.0, 1.8, 0],
+                    key="orange",
+                ),
             ),
-            style={"width": "100vw", "height": "900px"}
+            style={"width": "100vw", "height": "900px"},
         )
     )
     event = yield Set(page)

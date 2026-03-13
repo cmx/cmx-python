@@ -3,8 +3,23 @@ from time import sleep
 
 from tassa import Tassa
 from tassa.events import Set, Update, Frame
-from tassa.schemas import Page, Header1, Paragraph, ImageCls, Text, InputBox, Slider, ImageUpload, Button, \
-    Scene, Pcd, Ply, Glb, PointCloud, div
+from tassa.schemas import (
+    Page,
+    Header1,
+    Paragraph,
+    ImageCls,
+    Text,
+    InputBox,
+    Slider,
+    ImageUpload,
+    Button,
+    Scene,
+    Pcd,
+    Ply,
+    Glb,
+    PointCloud,
+    div,
+)
 
 doc = Tassa("ws://localhost:8013", reconnect=True, debug=True)
 
@@ -13,13 +28,13 @@ doc = Tassa("ws://localhost:8013", reconnect=True, debug=True)
 @doc.bind(start=True)
 def show_heatmap():
     from PIL import Image
+
     # image = Image.open("test.jpg")
 
     page = Page(
         Header1("Alan's Example"),
-        Text("This example shows how to update the page without being blocked by events "
-             "from the client"),
-        Paragraph("this is a text", key="text-1")
+        Text("This example shows how to update the page without being blocked by events " "from the client"),
+        Paragraph("this is a text", key="text-1"),
     )
 
     i = 0

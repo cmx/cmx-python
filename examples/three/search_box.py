@@ -18,7 +18,8 @@ from tassa.schemas import (
     Glb,
     Pivot,
     div,
-    Paragraph, InputBox,
+    Paragraph,
+    InputBox,
 )
 
 from tqdm import tqdm
@@ -40,7 +41,6 @@ doc = Tassa(
 )
 
 dataset = f"/Users/ge/datasets/rooms/ei_stairway_v1"
-# from ml_logger import logger
 
 with open(dataset + "/transforms.json", "r") as f:
     transforms = json.load(f)
@@ -67,7 +67,8 @@ def show_heatmap():
                         "margin": "auto 100px",
                         "borderRadius": "7px",
                         "position": "relative",
-                    }, key="search-bar",
+                    },
+                    key="search-bar",
                 ),
                 div(style={"position": "relative"}, key="output-box"),
                 key="HUD",
@@ -91,25 +92,39 @@ def show_heatmap():
     sleep(2.0)
 
     while True:
-        from ml_logger import logger
+        from cmx.utils import SimpleLogger
+        from datetime import datetime
 
         # this is not working.
-        event = yield Update(div(
-            Paragraph(f"Current frame: {logger.now()}"),
-            Paragraph(f"""
+        event = yield Update(
+            div(
+                Paragraph(f"Current frame: {datetime.now().isoformat()}"),
+                (
+                    Paragraph(
+                        f"""
             
             Event type: {event.etype}
             
-            """) if event.value else Paragraph(event.etype),
-            Paragraph(f"""
+            """
+                    )
+                    if event.value
+                    else Paragraph(event.etype)
+                ),
+                (
+                    Paragraph(
+                        f"""
             
             Event value: {event.value}
 
-            """) if event.value else Paragraph(event.etype),
-            key="output-box",
-        ),
+            """
+                    )
+                    if event.value
+                    else Paragraph(event.etype)
+                ),
+                key="output-box",
+            ),
         )
-        print('hey')
+        print("hey")
         sleep(0.01)
 
         if event == "TERMINAL":

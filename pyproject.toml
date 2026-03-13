@@ -4,18 +4,45 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "cmx"
-version = "0.0.46"
-description = ""
+version = "0.0.47"
+description = "REPL with Python Scripts via live documents - A documentation library for creating interactive markdown documentation from Python code"
 license = { text = "MIT" }
 readme = "README.md"
 requires-python = ">=3.8.6"
+authors = [
+    { name = "Ge Yang", email = "ge.ike.yang@gmail.com" }
+]
+keywords = ["documentation", "markdown", "jupyter", "notebooks", "live-documentation", "repl"]
 classifiers = [
     "Development Status :: 3 - Alpha",
-    "Programming Language :: Python",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Topic :: Documentation",
+    "Topic :: Software Development :: Documentation",
 ]
+
 dependencies = [
-    "functional_notations"
+    "waterbear>=2.6.0",
+    "pandas>=1.0.0",
+    "termcolor>=1.1.0",
+    "pillow>=8.0.0",
+    "matplotlib>=3.0.0",
+    "tabulate>=0.8.0",
+    "pyyaml>=5.0.0",
 ]
+
+[project.urls]
+Homepage = "https://github.com/cmx/cmx-python"
+Documentation = "https://cmx-python.readthedocs.io"
+Repository = "https://github.com/cmx/cmx-python"
+Issues = "https://github.com/cmx/cmx-python/issues"
+
 [project.optional-dependencies]
 # Development packages
 dev = [
@@ -24,11 +51,24 @@ dev = [
     "pytest==7.1.2",
 ]
 
-#[project.scripts]
-## Note, add entrypoint name to scripts/completions/install.py to include CLI completion
-#tassa = "tassa:entrypoint"
+# Documentation packages
+docs = [
+    "sphinx==7.1.2",
+    "furo",
+    "myst-parser",
+    "sphinx-autobuild",
+    "sphinx-copybutton",
+    "sphinx-design",
+]
+
+# Server packages (optional)
+server = [
+    "sanic==20.9.0",
+    "killport",
+]
 
 [tool.setuptools.packages.find]
+where = ["src"]
 include = ["cmx*"]
 
 [tool.setuptools.package-data]
