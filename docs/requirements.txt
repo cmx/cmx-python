@@ -1,10 +1,15 @@
-sphinx==7.1.2
+sphinx>=7.1.2
 furo
 myst-parser
 sphinx-autobuild
 sphinx-copybutton
 sphinx-design
-waterbear
-pandas
-pillow
-matplotlib
+linkify-it-py
+# Package dependencies needed for API docs
+waterbear>=2.6.0
+pandas>=1.0.0
+pillow>=8.0.0
+matplotlib>=3.0.0
+termcolor>=1.1.0
+tabulate>=0.8.0
+pyyaml>=5.0.0

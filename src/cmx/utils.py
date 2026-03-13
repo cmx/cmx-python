@@ -207,7 +207,7 @@ class SimpleLogger:
 
         Args:
             filename: Path where to save the figure
-            **kwargs: Additional arguments passed to matplotlib's savefig
+            kwargs: Additional arguments passed to matplotlib's savefig
         """
         import os
         import matplotlib.pyplot as plt

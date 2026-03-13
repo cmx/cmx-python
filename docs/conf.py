@@ -94,6 +94,7 @@ autodoc_default_options = {
     "exclude-members": "__init__,__post_init__",
 }
 autodoc_typehints = "description"
+autodoc_mock_imports = ["sanic"]
 
 # Source file suffixes
 source_suffix = {
