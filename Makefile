@@ -5,7 +5,7 @@ VERSION := $(shell cat VERSION)
 PACKAGE_NAME := cmx
 
 # notes on python packaging: http://python-packaging.readthedocs.io/en/latest/minimal.html
-.PHONY: default wheel dev convert-rst resize update-doc prepare release publish publish-no-test test preview docs clean
+.PHONY: default wheel dev convert-rst resize update-doc prepare release publish publish-no-test test preview docs clean update-plugin
 
 default: publish release
 
@@ -40,7 +40,11 @@ docs:
 	@echo "Documentation built! Open docs/_build/html/index.html"
 	python -m http.server 8888 --directory docs/_build/html
 
-prepare:
+update-plugin:
+	@echo "Updating Claude plugin version to $(VERSION)..."
+	python3 .claude-plugin/generate_plugin_json.py
+
+prepare: update-plugin
 	# Remove existing tags
 	git tag -d $(VERSION) || true
 	git tag -d latest || true
