@@ -1,4 +1,4 @@
-from functional_notations import _F
+from .utils import _F
 
 
 @_F

@@ -1,0 +1,18 @@
+{
+  "name": "cmx",
+  "version": "0.0.46",
+  "description": "CMX - REPL with Python Scripts via live documents",
+  "author": "Ge Yang",
+  "skills": [
+    {
+      "name": "cmx-basics",
+      "description": "Basic usage patterns and quick start guide for CMX",
+      "file": "cmx-basics.md"
+    },
+    {
+      "name": "cmx-components",
+      "description": "Guide to using CMX components (tables, images, videos, etc.)",
+      "file": "cmx-components.md"
+    }
+  ]
+}

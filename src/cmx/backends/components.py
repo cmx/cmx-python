@@ -1,5 +1,4 @@
 from types import SimpleNamespace
-from functional_notations import F
 
 from waterbear import Bear
 
@@ -12,13 +11,13 @@ from cmx.utils import is_subclass, to_snake
 
 def attrs(class_name=None, **kwargs):
     attrs_str = f'class="{class_name}"' if class_name else ""
-    attrs_str += " ".join([k.replace('_', "-") + f'="{str(v)}"' for k, v in kwargs.items()])
+    attrs_str += " ".join([k.replace("_", "-") + f'="{str(v)}"' for k, v in kwargs.items()])
 
     return attrs_str
 
 
 def styles(**kwargs):
-    return " ".join([k.replace('_', "-") + f':{str(v)};' for k, v in kwargs.items()])
+    return " ".join([k.replace("_", "-") + f":{str(v)};" for k, v in kwargs.items()])
 
 
 class FuncCall(SimpleNamespace):
@@ -35,6 +34,7 @@ class Component(object):
 
     def now(self, fmt=None):
         from datetime import datetime
+
         now = datetime.now().astimezone()
         return now.strftime(fmt) if fmt else now
 
@@ -64,7 +64,8 @@ class Component(object):
     def __getattribute__(self, item):
         try:
             return object.__getattribute__(self, item)
-        except AttributeError as e:
+        except AttributeError:
+
             def proxy_fn(*args, **kwargs):
                 """this leaks memory :)"""
                 return self._callback(item, *args, **kwargs)
@@ -97,11 +98,11 @@ class Container(Component):
 
     @property
     def _md(self):
-        raise RuntimeError(f'Container{self.__name__} does not support markdown generation directly')
+        raise RuntimeError(f"Container{self.__name__} does not support markdown generation directly")
 
     @property
     def _html(self):
-        raise RuntimeError(f'Container{self.__name__} does not support html generation directly')
+        raise RuntimeError(f"Container{self.__name__} does not support html generation directly")
 
 
 class Div(Component):
@@ -119,7 +120,11 @@ class Span(Component):
 
     @property
     def _md(self):
-        return self.text
+        # Ensure text ends with newline for proper markdown formatting
+        text = self.text
+        if text and not text.endswith("\n"):
+            text = text + "\n"
+        return text
 
     @property
     def _html(self):
@@ -147,42 +152,32 @@ class Pre(Component):
 
     @property
     def _md(self):
-        text = self.text + ('' if self.text.endswith('\n') else '\n')
-        if not text.startswith('\n'):
-            text = '\n' + text
+        text = self.text + ("" if self.text.endswith("\n") else "\n")
+        if not text.startswith("\n"):
+            text = "\n" + text
         return f"```{self.lang if self.lang else ''}{text}```\n"
 
     @property
     def _html(self):
         # todo: support language strings
         if self.lang:
-            segs = [
-                '<pre>',
-                f'<code class="{self.lang}">',
-                f'{self.text}',
-                f'</code>',
-                '</pre>'
-            ]
+            segs = ["<pre>", f'<code class="{self.lang}">', f"{self.text}", "</code>", "</pre>"]
         else:
-            segs = [
-                '<pre>',
-                f'{self.text}',
-                '</pre>'
-            ]
+            segs = ["<pre>", f"{self.text}", "</pre>"]
         return "\n".join(segs) + "\n"
 
 
 class Link(Component):
     tag = "span"
 
-    def __init__(self,href="", text="", **kwargs):
+    def __init__(self, href="", text="", **kwargs):
         super().__init__(**kwargs)
         self.text = text
         self.href = href
 
     @property
     def _md(self):
-        return f'[{self.text}]({self.href})'
+        return f"[{self.text}]({self.href})"
 
     @property
     def _html(self):
@@ -216,6 +211,7 @@ class Img(Component):
 
 class Image(Img):
     """Advanced Image with Data handling"""
+
     data = None
 
     def __init__(self, image=None, src=None, normalize=False, **kwargs):
@@ -223,6 +219,7 @@ class Image(Img):
             super().__init__(src=src, **kwargs)
         else:
             import numpy as np
+
             # todo: need to support 16 and 32 bit images, especially depth images.
             self.data = np.array(image).astype(np.uint8)
             super().__init__(src=self.base64, **kwargs)
@@ -237,7 +234,7 @@ class Image(Img):
 
         with BytesIO() as buf:
             pImage.fromarray(self.data).save(buf, "png")
-            return "data:image/png;base64," + base64.b64encode(buf.getvalue()).decode('utf-8')
+            return "data:image/png;base64," + base64.b64encode(buf.getvalue()).decode("utf-8")
 
 
 class Video(Component):
@@ -250,12 +247,14 @@ class Video(Component):
 
     @property
     def _html(self):
-        return utils.dedent(f"""
+        return utils.dedent(
+            f"""
         <video width="{self.width}" height="{self.height}" controls="{str(self.controls).lower()}">
           <source src="{self.src}" type="video/mp4">
           Your browser does not support the video tag.
         </video>
-        """)
+        """
+        )
 
 
 class Figure(Component):
@@ -285,9 +284,11 @@ class Figure(Component):
 
 
 class Row(Component):
-    styles = dict(display="flex",
-                  flex_direction="row",
-                  item_align="center", )
+    styles = dict(
+        display="flex",
+        flex_direction="row",
+        item_align="center",
+    )
 
     def __init__(self, wrap=False, styles={}, **kwargs):
         super().__init__(**kwargs)
@@ -311,6 +312,7 @@ class Row(Component):
 #     pass
 # class TableColumn(Component):
 #     pass
+
 
 class FigureRow(Container):
     def __init__(self, header=None, n_cols=None, **kwargs):
@@ -360,9 +362,19 @@ class Table(Component):
     data = None
 
     def __init__(self, table=None, show_index=None, format="github", sep=",*", **kwargs):
-        super().__init__(**kwargs)
+        # Filter out component-specific kwargs before passing to parent
+        component_kwargs = {}
+        table_kwargs = {}
+        component_params = {"tag", "children", "window", "class_name"}
+        for k, v in kwargs.items():
+            if k in component_params:
+                component_kwargs[k] = v
+            else:
+                table_kwargs[k] = v
+
+        super().__init__(**component_kwargs)
         self.show_index = show_index
-        self.kwargs = kwargs
+        self.kwargs = table_kwargs  # Only non-component kwargs
         self.format = format
         if table is None:
             pass
@@ -378,8 +390,7 @@ class Table(Component):
         # todo: pad columns (done automatically?)
         # we organize by rows. Columns has to be contained in a row.
         if not self.children:
-            return self.data.to_markdown(index=self.show_index,
-                                         tablefmt=self.format, **self.kwargs) + "\n"
+            return self.data.to_markdown(index=self.show_index, tablefmt=self.format, **self.kwargs) + "\n"
         rows = []
         for child in self.children:
             if isinstance(child, FigureRow):
@@ -388,9 +399,9 @@ class Table(Component):
                 rows.append(child.children)
         _md_str = ""
         for i, r in enumerate(rows):
-            _md_str += "| " + " | ".join([' ' if c is None else c._md.strip() for c in r]) + " |\n"
+            _md_str += "| " + " | ".join([" " if c is None else c._md.strip() for c in r]) + " |\n"
             if i == 0:
-                _md_str += "|:" + ":|:".join(['-' if c is None else '-' * len(c._md.strip()) for c in r]) + ":|\n"
+                _md_str += "|:" + ":|:".join(["-" if c is None else "-" * len(c._md.strip()) for c in r]) + ":|\n"
         return _md_str
 
     @property
@@ -411,7 +422,8 @@ class Article(Html):
 
     @property
     def _md(self):
-        return "\n".join([c._md for c in self.children])
+        # Each component's _md already ends with newline, so just concatenate
+        return "".join([c._md for c in self.children])
 
 
 class Print(Pre):

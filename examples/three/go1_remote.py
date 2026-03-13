@@ -50,6 +50,7 @@ DEFAULT_POS = {
 
 a = 0
 
+
 @doc.spawn(start=True)
 async def go1_running():
     global a
@@ -100,4 +101,4 @@ async def go1_running():
             print(a, event, len(doc.downlink_queue))
         doc.clear()
 
-        await sleep(1/50.)
+        await sleep(1 / 50.0)

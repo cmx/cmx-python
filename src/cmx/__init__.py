@@ -1,9 +1,8 @@
 import os
 
-from functional_notations import F
-
+from cmx.utils import F
 from cmx.backends.markdown import CommonMark
-from . import data
+from . import data as data  # Explicit re-export
 
 doc = CommonMark(root=os.getcwd(), prefix=".")
 md = doc

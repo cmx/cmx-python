@@ -1,31 +1,71 @@
 # OS
 .DS_Store
-# PyCharm project files
-.idea
+
 # IDE files
-.eggs
-.tox
-# Setuptools distribution and build folders.
-dist
-build
+.idea
+.vscode
+*.swp
 
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
 
-# Python egg metadata, regenerated from source files by setuptools.
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Distribution / packaging
+.eggs/
+.tox/
+dist/
+build/
+*.egg-info/
+*.egg
+
+# Testing
+.cache/
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
+# Jupyter
 .ipynb_checkpoints
-.cache
-*.egg-info
-MUJOCO_LOG.txt
 
+# Documentation
+docs/_build/
+docs/_static/
+docs/_templates/
+
+# Project specific
+output/
+pcds/
 *out
 *.npy
 *.csv
 *.p
-
-*.swp
 *.gz
-*.npy
-*.pyc
-*.py~
+MUJOCO_LOG.txt
 
-output
-pcds
+# Sphinx
+*.mo
+*.pot
+
+# Ruff
+.ruff_cache/
+
+# MyPy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Pyright
+.pyright/

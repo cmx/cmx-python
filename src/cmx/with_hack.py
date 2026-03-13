@@ -28,8 +28,7 @@ class SkipContextManager:
             return True  # Suppress special SkipWithBlock exception
 
 
-if __name__ == '__main__':
-    with SkipContextManager(skip=True) \
-            as this_works:
-        print('In the with block')  # Won't be called
-    print('Out of the with block')
+if __name__ == "__main__":
+    with SkipContextManager(skip=True) as this_works:
+        print("In the with block")  # Won't be called
+    print("Out of the with block")

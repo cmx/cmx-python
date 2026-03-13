@@ -49,13 +49,10 @@ dataset = f"/instant-feature/datasets/rooms_dpvo/davis_lab_v1"
 # dataset = f"/instant-feature/datasets/rooms_dpvo/shelf_in_room_v5"
 # dataset = f"/instant-feature/datasets/rooms_dpvo/whiteboard_v1"
 # dataset = f"/instant-feature/datasets/slam/experiments/ycb_v0_small"
-# from ml_logger import logger
 
-# with open(dataset + "/transforms.json", "r") as f:
-#     transforms = json.load(f)
-# print(transforms)
-from ml_logger import logger
+from cmx.utils import SimpleLogger
 
+logger = SimpleLogger()
 transforms = logger.load_json(dataset + "/transforms.json")
 poses = sorted(transforms["frames"], key=lambda x: x["file_path"])
 
@@ -100,7 +97,7 @@ def show_heatmap():
     )
 
     event = yield Set(scene)
-    assert event == "INIT";
+    assert event == "INIT"
 
     sleep(2.0)
 

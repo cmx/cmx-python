@@ -41,7 +41,7 @@ async def show_heatmap():
         i += 1
         phase = 0.1 * np.pi * i / 50
         pinch = 0.033 * (i % 30)
-        position = [0.2 * np.sin(phase), .2, 0.2 * np.cos(phase)]
+        position = [0.2 * np.sin(phase), 0.2, 0.2 * np.cos(phase)]
         event = yield Frame(
             Update(
                 Urdf(
