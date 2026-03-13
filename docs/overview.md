@@ -99,6 +99,17 @@ Dataset mean: 30.0
 - Use `doc.flush()` to write the file
 - Code outside `with doc:` blocks is hidden
 
+## Claude Code Integration
+
+CMX includes a Claude Code plugin that provides AI assistance when working with CMX. The plugin helps you understand CMX syntax, patterns, and components through natural language interaction.
+
+To use the CMX skills in Claude Code, the plugin is automatically detected from the `.claude-plugin/` directory when you work in this repository. The plugin provides two skills:
+
+- **cmx-basics**: Quick start guide and basic usage patterns
+- **cmx-components**: Detailed guide for tables, images, videos, YAML, and layouts
+
+Simply mention CMX-related tasks in Claude Code, and the AI will have access to comprehensive CMX knowledge to help you write scripts, debug issues, and learn best practices.
+
 ## Next Steps
 
 - [Installation](installation.md) - Set up CMX
