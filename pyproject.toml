@@ -53,12 +53,13 @@ dev = [
 
 # Documentation packages
 docs = [
-    "sphinx==7.1.2",
+    "sphinx>=7.1.2,<8",
     "furo",
-    "myst-parser",
+    "myst-parser>=3.0,<4",
     "sphinx-autobuild",
     "sphinx-copybutton",
     "sphinx-design",
+    "linkify-it-py>=2.0",
 ]
 
 # Server packages (optional)
