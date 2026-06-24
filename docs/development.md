@@ -106,7 +106,7 @@ cmx-python/
 ├── docs/                 # Sphinx documentation
 │   ├── conf.py          # Sphinx configuration
 │   ├── index.md         # Documentation home page
-│   ├── quick_start.md   # Quick start guide
+│   ├── overview.md      # Quick start guide
 │   ├── development.md   # This file
 │   └── api/             # API documentation
 ├── examples/            # Example scripts

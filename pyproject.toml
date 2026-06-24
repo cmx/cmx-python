@@ -8,7 +8,7 @@ version = "0.0.47"
 description = "REPL with Python Scripts via live documents - A documentation library for creating interactive markdown documentation from Python code"
 license = { text = "MIT" }
 readme = "README.md"
-requires-python = ">=3.8.6"
+requires-python = ">=3.11"
 authors = [
     { name = "Ge Yang", email = "ge.ike.yang@gmail.com" }
 ]
@@ -19,22 +19,16 @@ classifiers = [
     "Intended Audience :: Science/Research",
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.8",
-    "Programming Language :: Python :: 3.9",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Topic :: Documentation",
     "Topic :: Software Development :: Documentation",
 ]
 
 dependencies = [
-    "waterbear>=2.6.0",
     "pandas>=1.0.0",
-    "termcolor>=1.1.0",
-    "pillow>=8.0.0",
-    "matplotlib>=3.0.0",
     "tabulate>=0.8.0",
-    "pyyaml>=5.0.0",
 ]
 
 [project.urls]
@@ -44,27 +38,35 @@ Repository = "https://github.com/cmx/cmx-python"
 Issues = "https://github.com/cmx/cmx-python/issues"
 
 [project.optional-dependencies]
-# Development packages
+# Feature extras -- imported lazily, install only what you use.
+# e.g. `pip install cmx[images]` or `pip install cmx[all]`.
+images = ["pillow>=8.0.0", "numpy>=1.18.0"]
+figures = ["matplotlib>=3.0.0"]
+yaml = ["pyyaml>=5.0.0"]
+all = ["pillow>=8.0.0", "numpy>=1.18.0", "matplotlib>=3.0.0", "pyyaml>=5.0.0"]
+
+# Development packages (floors, not exact pins, so they track current releases)
 dev = [
-    "black==22.3.0",
-    "pylint==2.13.4",
-    "pytest==7.1.2",
+    "black>=24.0",
+    "pylint>=3.0",
+    "pytest>=7.4",
 ]
 
-# Documentation packages
+# Documentation packages (caps widened to admit current Sphinx/myst majors)
 docs = [
-    "sphinx>=7.1.2,<8",
+    "sphinx>=7.1.2,<10",
     "furo",
-    "myst-parser>=3.0,<4",
+    "myst-parser>=3.0,<6",
     "sphinx-autobuild",
     "sphinx-copybutton",
     "sphinx-design",
     "linkify-it-py>=2.0",
 ]
 
-# Server packages (optional)
+# Server packages (optional). NOTE: the Sanic server is an out-of-scope stub;
+# the floor is modernised but the server itself is not test-verified.
 server = [
-    "sanic==20.9.0",
+    "sanic>=23.0",
     "killport",
 ]
 
@@ -118,5 +120,5 @@ reportMissingTypeStubs = false
 reportPrivateImportUsage = false
 reportUndefinedVariable = false
 
-pythonVersion = "3.8"
+pythonVersion = "3.11"
 pythonPlatform = "Linux"

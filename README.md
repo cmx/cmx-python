@@ -54,7 +54,7 @@ for i in range(10):
 
 Full documentation is available at: **https://cmx-python.readthedocs.io**
 
-- [Quick Start Guide](https://cmx-python.readthedocs.io/en/latest/quick_start.html)
+- [Quick Start Guide](https://cmx-python.readthedocs.io/en/latest/overview.html)
 - [Development Guide](https://cmx-python.readthedocs.io/en/latest/development.html)
 - [API Reference](https://cmx-python.readthedocs.io/en/latest/api/)
 

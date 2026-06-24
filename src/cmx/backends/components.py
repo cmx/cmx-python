@@ -1,18 +1,25 @@
-from types import SimpleNamespace
+"""Render components for the CMX markdown backend.
 
-from waterbear import Bear
+Each component knows how to render itself as Markdown (``_md``) and HTML
+(``_html``). Components form a tree: an :class:`Article` holds children, some of
+which (``Table``, ``FigureRow``, ``Row``) hold children of their own.
 
-from .. import utils
-import pandas as pd
+This module is dependency-inverted the simple way: there is no class registry or
+``__getattribute__`` proxy. Parents create their children by calling the
+component classes directly, and the optional file-writing ``logger`` is threaded
+down explicitly. Anything that needs heavy third-party libraries (numpy, PIL,
+pyyaml) imports them lazily so ``import cmx`` stays cheap.
+"""
+
 from io import StringIO
 
-from cmx.utils import is_subclass, to_snake
+from .. import utils
+from ..utils import is_subclass, to_snake  # re-exported for backwards compatibility
 
 
 def attrs(class_name=None, **kwargs):
     attrs_str = f'class="{class_name}"' if class_name else ""
     attrs_str += " ".join([k.replace("_", "-") + f'="{str(v)}"' for k, v in kwargs.items()])
-
     return attrs_str
 
 
@@ -20,58 +27,30 @@ def styles(**kwargs):
     return " ".join([k.replace("_", "-") + f":{str(v)};" for k, v in kwargs.items()])
 
 
-class FuncCall(SimpleNamespace):
-    name = None
-    args = tuple()
-    kwargs = {}
+class Component:
+    """Base node in the document tree.
 
+    A component renders to Markdown via ``_md`` and to HTML via ``_html``. The
+    default implementation emits a generic ``<tag>...children...</tag>``; most
+    subclasses override one or both properties.
+    """
 
-class Component(object):
     tag = None
     data = None
     class_name = None
-    window = Bear()
+
+    def __init__(self, tag=None, children=None, logger=None, **kwargs):
+        self.tag = tag or self.tag
+        self.kwargs = kwargs
+        self.style = {}
+        self.children = [] if children is None else children
+        self.logger = logger
 
     def now(self, fmt=None):
         from datetime import datetime
 
         now = datetime.now().astimezone()
         return now.strftime(fmt) if fmt else now
-
-    def __init__(self, tag=None, children=None, window=None, **kwargs):
-        self.tag = tag or self.tag
-        self.kwargs = kwargs
-        self.style = {}
-        self.children = children or []
-        if window:
-            _window = self.window.copy()
-            _window.update(window)
-            self.window = _window
-
-    def _callback(self, item, *args, window=None, **kwargs):
-        # change to self.comp_list attribute to make explicit.
-        if window:
-            _window = self.window.copy()
-            _window.update(window)
-            window = _window
-        else:
-            window = self.window
-        Comp = window[item]
-        component = Comp(*args, window=window, **kwargs)
-        self.children.append(component)
-        return component
-
-    def __getattribute__(self, item):
-        try:
-            return object.__getattribute__(self, item)
-        except AttributeError:
-
-            def proxy_fn(*args, **kwargs):
-                """this leaks memory :)"""
-                return self._callback(item, *args, **kwargs)
-
-            return proxy_fn
-            # return F @ proxy_fn
 
     @property
     def _attrs(self):
@@ -83,9 +62,10 @@ class Component(object):
 
     @property
     def _html(self):
-        # todo: add styles to this.
-        return f"<{self.tag} {self._attrs}>{''.join([b._html for b in self.children if b is not None])}</{self.tag}>"
+        inner = "".join([c._html for c in self.children if c is not None])
+        return f"<{self.tag} {self._attrs}>{inner}</{self.tag}>"
 
+    # Components double as context managers so ``with doc.table() as t:`` works.
     def __enter__(self):
         return self
 
@@ -94,15 +74,15 @@ class Component(object):
 
 
 class Container(Component):
-    """does not support _md and _html"""
+    """A holder that is rendered by its parent, never on its own."""
 
     @property
     def _md(self):
-        raise RuntimeError(f"Container{self.__name__} does not support markdown generation directly")
+        raise RuntimeError(f"Container {type(self).__name__} does not support markdown generation directly")
 
     @property
     def _html(self):
-        raise RuntimeError(f"Container{self.__name__} does not support html generation directly")
+        raise RuntimeError(f"Container {type(self).__name__} does not support html generation directly")
 
 
 class Div(Component):
@@ -120,7 +100,7 @@ class Span(Component):
 
     @property
     def _md(self):
-        # Ensure text ends with newline for proper markdown formatting
+        # Block-level text ends with a newline so siblings don't run together.
         text = self.text
         if text and not text.endswith("\n"):
             text = text + "\n"
@@ -139,7 +119,10 @@ class Bold(Span):
 
     @property
     def _md(self):
-        return f"**{super()._md}**"
+        # Wrap the stripped text so the ``**`` markers hug the content. (The old
+        # implementation wrapped ``Span._md``, which left the trailing newline
+        # *inside* the markers, e.g. ``**title\n**`` -- broken inside tables.)
+        return f"**{self.text.strip()}**\n"
 
 
 class Pre(Component):
@@ -159,7 +142,6 @@ class Pre(Component):
 
     @property
     def _html(self):
-        # todo: support language strings
         if self.lang:
             segs = ["<pre>", f'<code class="{self.lang}">', f"{self.text}", "</code>", "</pre>"]
         else:
@@ -200,33 +182,41 @@ class Img(Component):
     def _md(self):
         if self.zoom is None:
             return f"![{self.src}]({self.alt or self.src})"
-        else:
-            return self._html
+        return self._html
 
     @property
     def _html(self):
-        # prevent stretched when inside flex-box.
+        # align_self prevents stretching inside a flex Row.
         return f'<img style="{styles(align_self="center", **self.style)}" src="{self.src}" {self._attrs}/>'
 
 
 class Image(Img):
-    """Advanced Image with Data handling"""
+    """An image that can reference a file, save data to a file, or inline base64.
+
+    - ``src`` only            -> reference the file path.
+    - ``src`` + ``image`` + a ``logger`` -> write the file, then reference it.
+    - ``image`` only          -> inline the data as a base64 ``data:`` URI.
+    """
 
     data = None
 
-    def __init__(self, image=None, src=None, normalize=False, **kwargs):
-        if image is None:
+    def __init__(self, image=None, src=None, logger=None, normalize=False, **kwargs):
+        if src is not None:
+            file_path, *_ = src.split("?")
+            if image is not None and logger is not None:
+                logger.save_image(image, file_path, normalize=normalize)
             super().__init__(src=src, **kwargs)
-        else:
+        elif image is not None:
             import numpy as np
 
-            # todo: need to support 16 and 32 bit images, especially depth images.
+            # todo: support 16/32-bit images (e.g. depth maps).
             self.data = np.array(image).astype(np.uint8)
             super().__init__(src=self.base64, **kwargs)
+        else:
+            super().__init__(src=None, **kwargs)
 
     @property
     def base64(self):
-        # if self.data is not None:
         assert self.data is not None
         from io import BytesIO
         from PIL import Image as pImage
@@ -257,30 +247,53 @@ class Video(Component):
         )
 
 
+def video(frames=None, *, src, logger=None, **kwargs):
+    """Save video frames (if given) and return the matching component.
+
+    ``.gif`` sources render as an ``Image``; everything else as a ``Video``.
+    """
+    file_path, *_ = src.split("?")
+    if frames is not None and logger is not None:
+        logger.save_video(frames, file_path)
+    if file_path.endswith("gif"):
+        return Image(src=src, **kwargs)
+    return Video(src=src, **kwargs)
+
+
 class Figure(Component):
     tag = "div"
 
-    def __init__(self, image=None, src=None, title=None, caption=None, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, image=None, src=None, title=None, caption=None, logger=None, **kwargs):
+        super().__init__(logger=logger)
         self.src = src
         if isinstance(image, Component):
             self.img = image
         else:
-            self.img = self.window.img(image=image, src=src, styles=dict(margin="0.5em"), **kwargs)
+            self.img = Image(image=image, src=src, logger=logger, **kwargs)
         self.title = title
         self.caption = caption
-
         self.children = [self.title, self.img, self.caption]
 
     @property
     def _html(self):
         if self.title and self.caption:
-            return f"""<table><tr><td rowspan="2">{self.img._html}</td><td>{self.title}</td></tr><tr><td>{self.caption}</td></tr></table>"""
+            return (
+                f'<table><tr><td rowspan="2">{self.img._html}</td>'
+                f"<td>{self.title}</td></tr><tr><td>{self.caption}</td></tr></table>"
+            )
         elif self.caption:
-            return f"""<table><tr><td rowspan="2">{self.img._html}</td><td>{self.caption}</td></tr></table>"""
+            return f'<table><tr><td rowspan="2">{self.img._html}</td><td>{self.caption}</td></tr></table>'
         elif self.title:
-            return f"""<table><tr><th>{self.title}</th></tr><tr><td>{self.img._html}</td></tr></table>"""
+            return f"<table><tr><th>{self.title}</th></tr><tr><td>{self.img._html}</td></tr></table>"
         return self.img._html
+
+
+class Savefig(Figure):
+    def __init__(self, key, caption=None, width=None, height=None, zoom=None, logger=None, **kwargs):
+        file_path, *_ = key.split("?")
+        super().__init__(src=key, width=width, height=height, caption=caption, zoom=zoom, logger=logger, **kwargs)
+        if logger is not None:
+            logger.savefig(file_path, **kwargs)
 
 
 class Row(Component):
@@ -290,61 +303,50 @@ class Row(Component):
         item_align="center",
     )
 
-    def __init__(self, wrap=False, styles={}, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, wrap=False, styles=None, logger=None, **kwargs):
+        super().__init__(logger=logger, **kwargs)
         if wrap is not None:
             wrap = "wrap" if wrap else "nowrap"
-
         self.styles = dict(flex_wrap=wrap, **Row.styles)
-        self.styles.update(styles)
+        self.styles.update(styles or {})
 
     @property
     def _html(self):
-        # use children's HTML instead of markdown.
-        return f'<div style="{styles(**self.styles)}">{"".join([c._html for c in self.children])}</div>'
-
-
-# todo: use table component for images
-# fixme: Not Implemented
-# class TableCell(Component):
-#     pass
-# class TableRow(Component):
-#     pass
-# class TableColumn(Component):
-#     pass
+        inner = "".join([c._html for c in self.children])
+        return f'<div style="{styles(**self.styles)}">{inner}</div>'
 
 
 class FigureRow(Container):
-    def __init__(self, header=None, n_cols=None, **kwargs):
-        super().__init__(**kwargs)
-        # self.header = header
-        # todo: add fixed n_cols support
+    """A horizontal band of figures rendered by its parent ``Table`` as up to
+    three Markdown rows: titles, images, and captions (empty bands are dropped).
+    """
+
+    def __init__(self, header=None, n_cols=None, logger=None, **kwargs):
+        super().__init__(logger=logger, **kwargs)
         self.n_cols = n_cols
         self.titles = []
         self.images = []
         self.footers = []
 
     def figure(self, image=None, src=None, title=None, caption=None, **kwargs):
-        # todo: if image is Image/Video/Component
-        self.titles.append(title if title is None else Bold(title))
-        self.footers.append(caption if caption is None else Span(caption))
-        self.image(image=image, src=src, **kwargs)
+        self.titles.append(None if title is None else Bold(title))
+        self.footers.append(None if caption is None else Span(caption))
+        self.children.append(Image(image=image, src=src, logger=self.logger, **kwargs))
 
     def video(self, frames=None, src=None, title=None, caption=None, **kwargs):
-        self.titles.append(title if title is None else Bold(title))
-        self.footers.append(caption if caption is None else Span(caption))
-        v = self.window.video(frames=frames, src=src, window=self.window, **kwargs)
-        self.children.append(v)
+        self.titles.append(None if title is None else Bold(title))
+        self.footers.append(None if caption is None else Span(caption))
+        self.children.append(video(frames=frames, src=src, logger=self.logger, **kwargs))
 
     def column(self, title=None, text=None, footer=None):
-        self.titles.append(title if title is None else Bold(title))
-        self.footers.append(footer if footer is None else Span(footer))
+        self.titles.append(None if title is None else Bold(title))
+        self.footers.append(None if footer is None else Span(footer))
         self.children.append(Text(text))
 
     def savefig(self, key, title=None, caption=None, **kwargs):
-        self.titles.append(title if title is None else Bold(title))
-        self.footers.append(caption if caption is None else Span(caption))
-        self.children.append(self.window.savefig(key, window=self.window, **kwargs))
+        self.titles.append(None if title is None else Bold(title))
+        self.footers.append(None if caption is None else Span(caption))
+        self.children.append(Savefig(key, logger=self.logger, **kwargs))
 
     @property
     def rows(self):
@@ -357,40 +359,43 @@ class FigureRow(Container):
         return non_empty_rows
 
 
-# todo: HashTable: use (row, col, row_span, col_span) to record cells.
 class Table(Component):
+    """A Markdown/HTML table.
+
+    Pass tabular ``data`` (a DataFrame, CSV string, or anything pandas accepts)
+    for a data table, or build a figure grid with :meth:`figure_row`.
+    """
+
     data = None
 
-    def __init__(self, table=None, show_index=None, format="github", sep=",*", **kwargs):
-        # Filter out component-specific kwargs before passing to parent
-        component_kwargs = {}
-        table_kwargs = {}
-        component_params = {"tag", "children", "window", "class_name"}
-        for k, v in kwargs.items():
-            if k in component_params:
-                component_kwargs[k] = v
-            else:
-                table_kwargs[k] = v
-
-        super().__init__(**component_kwargs)
+    def __init__(self, table=None, show_index=None, format="github", sep=",*", logger=None, **kwargs):
+        super().__init__(logger=logger)
         self.show_index = show_index
-        self.kwargs = table_kwargs  # Only non-component kwargs
+        self.kwargs = kwargs  # forwarded to pandas' to_markdown / to_html
         self.format = format
         if table is None:
             pass
-        elif isinstance(table, str):
-            self.data = pd.read_csv(StringIO(table), sep=sep)
-        elif isinstance(table, pd.DataFrame):
-            self.data = table
         else:
-            self.data = pd.DataFrame(table)
+            import pandas as pd
+
+            if isinstance(table, str):
+                self.data = pd.read_csv(StringIO(table), sep=sep)
+            elif isinstance(table, pd.DataFrame):
+                self.data = table
+            else:
+                self.data = pd.DataFrame(table)
+
+    def figure_row(self, **kwargs):
+        row = FigureRow(logger=self.logger, **kwargs)
+        self.children.append(row)
+        return row
 
     @property
     def _md(self):
-        # todo: pad columns (done automatically?)
-        # we organize by rows. Columns has to be contained in a row.
         if not self.children:
             return self.data.to_markdown(index=self.show_index, tablefmt=self.format, **self.kwargs) + "\n"
+        # Flatten children into rows of cells. FigureRows expand to their
+        # (titles / images / captions) bands; any other child yields its cells.
         rows = []
         for child in self.children:
             if isinstance(child, FigureRow):
@@ -409,23 +414,60 @@ class Table(Component):
         return self.data.to_html(index=self.show_index, **self.kwargs)
 
 
-# todo: should be Body, b/c Html includes body and head
-class Html(Component):
+class _Factory:
+    """Mixin of component-creating helpers shared by document containers.
+
+    Each helper instantiates a component (threading this container's ``logger``),
+    appends it as a child, and returns it -- so the result can be used directly
+    or as a ``with`` block.
+    """
+
+    def table(self, table=None, **kwargs):
+        t = Table(table, logger=self.logger, **kwargs)
+        self.children.append(t)
+        return t
+
+    def image(self, image=None, src=None, **kwargs):
+        img = Image(image=image, src=src, logger=self.logger, **kwargs)
+        self.children.append(img)
+        return img
+
+    def figure(self, image=None, src=None, title=None, caption=None, **kwargs):
+        fig = Figure(image=image, src=src, title=title, caption=caption, logger=self.logger, **kwargs)
+        self.children.append(fig)
+        return fig
+
+    def video(self, frames=None, src=None, **kwargs):
+        v = video(frames=frames, src=src, logger=self.logger, **kwargs)
+        self.children.append(v)
+        return v
+
+    def savefig(self, key, **kwargs):
+        fig = Savefig(key, logger=self.logger, **kwargs)
+        self.children.append(fig)
+        return fig
+
+    def row(self, *args, **kwargs):
+        r = Row(*args, logger=self.logger, **kwargs)
+        self.children.append(r)
+        return r
+
+
+class Html(_Factory, Component):
     tag = "body"
-    window = Bear(**{to_snake(k): v for k, v in globals().items() if is_subclass(v, Component)})
 
 
 class Article(Html):
     tag = "article"
     class_name = "commonmark"
-    window = Bear(**{to_snake(k): v for k, v in globals().items() if is_subclass(v, Component)})
 
     @property
     def _md(self):
-        # Each component's _md already ends with newline, so just concatenate
+        # Each child's _md already ends in a newline, so plain concatenation
+        # keeps blocks separated.
         return "".join([c._md for c in self.children])
 
 
 class Print(Pre):
-    def __init__(self, *args, sep=" ", end="\n"):
-        super().__init__(sep.join([str(a) for a in args]) + end)
+    def __init__(self, *args, sep=" ", end="\n", **kwargs):
+        super().__init__(sep.join([str(a) for a in args]) + end, **kwargs)

@@ -1,57 +1,30 @@
+"""The CommonMark document -- the object exported as ``cmx.doc``.
+
+A ``CommonMark`` is an :class:`~cmx.backends.components.Article` (so it inherits
+the component factories: ``table``, ``image``, ``figure``, ``row``, ``video``,
+``savefig``) plus the live-document machinery: the ``@`` / ``|`` / call operators
+for adding markdown, ``with doc:`` source capture, and ``flush`` to write out.
+"""
+
 import os
 from copy import deepcopy
-
-from ..utils import get_block, is_subclass, to_snake, SimpleLogger, _F
+from contextlib import ExitStack
 
 from . import components
-from ..utils import dedent
+from ..utils import get_block, dedent, SimpleLogger
 from ..with_hack import SkipContextManager
 
-
-def video(frames=None, *, src, window, **kwargs):
-    """save video at filename.
-
-    :param data:
-    :param filename:
-    :param kwargs:
-    :return:
-    """
-    file_path, *query_strs = src.split("?")
-    if frames is not None:
-        window.logger.save_video(frames, file_path)
-    if file_path.endswith("gif"):
-        return components.Image(src=src, **kwargs)
-    else:
-        return components.Video(src=src, **kwargs)
-
-
-class Figure(components.Figure):
-    def __init__(self, image=None, src=None, title=None, caption=None, *, window, **kwargs):
-        if not isinstance(image, components.Component):
-            image = window.image(image, src, window=window, **kwargs)
-        super().__init__(image=image, src=src, title=title, caption=caption, window=window)
-
-
-class Image(components.Image):
-    def __init__(self, image=None, src=None, *, window, normalize=False, **kwargs):
-        if src is not None:
-            file_path, *query_strs = src.split("?")
-            if image is not None:
-                window.logger.save_image(image, file_path, normalize=normalize)
-            super().__init__(src=src, **kwargs)
-        else:
-            super().__init__(image, **kwargs)
-
-
-class Savefig(components.Figure):
-    def __init__(self, key, caption=None, width=None, height=None, zoom=None, window=None, **kwargs):
-        file_path, *_ = key.split("?")
-        super().__init__(src=key, width=width, height=height, caption=caption, zoom=zoom, window=window, **kwargs)
-        self.window.logger.savefig(file_path, **kwargs)
-
+# Re-exported so existing ``from cmx.backends.markdown import ...`` imports keep
+# working after the components were unified into one module.
+from .components import Image, Figure, Savefig, video  # noqa: F401
 
 USER = os.environ.get("USER", None)
 PWD = os.environ.get("PWD", None)
+
+
+def _green(message):
+    """Return ``message`` wrapped in ANSI green (replaces the termcolor dep)."""
+    return f"\033[32m{message}\033[0m"
 
 
 class CommonMark(components.Article):
@@ -60,179 +33,126 @@ class CommonMark(components.Article):
 
     @property
     def hide(self):
-        """This is an amazing shortcut that alllows you to skip execution
-        of a section during writing!
-
-        But this currently interference with pydev, the debugging utility
-        used in pyCharm. I have not tested this on dgp yet, but I expect
-        similar issues.
+        """``with doc.hide:`` runs its body but does *not* capture the source as
+        a code block -- handy for boilerplate you want to execute but not show.
         """
-        from contextlib import ExitStack
-
         return ExitStack()
 
     @property
     def skip(self):
-        """This is an amazing shortcut that alllows you to skip execution
-        of a section during writing!
+        """``with doc.skip:`` skips execution of its body entirely.
 
-        But this currently interference with pydev, the debugging utility
-        used in pyCharm. I have not tested this on dgp yet, but I expect
-        similar issues.
+        Implemented via frame tracing (see :class:`SkipContextManager`); this can
+        interfere with debuggers such as PyCharm's pydev.
         """
         return SkipContextManager(True)
 
     def __init__(self, filename=None, overwrite=True, root=None, prefix=None, logger=None):
         """
-        Called by the module __init__.py to create a global document object.
-
-        :param filename: the filename for the output markdown file.
-        :param overwrite: Whether to append to the existing document, or to clear and
-            start afresh
-        :param logger: allow passing in an existing logger to log to a remote server instead.
-            this is similar to a figure object as in matplotlib.
+        :param filename: output markdown filename (auto-derived from the calling
+            script when omitted).
+        :param overwrite: clear the file on configure instead of appending.
+        :param logger: a pre-built logger (e.g. to a remote server); defaults to
+            a local :class:`SimpleLogger` rooted at ``root``/``prefix``.
         """
-        super().__init__(window={to_snake(k): v for k, v in globals().items() if is_subclass(v, components.Component)})
-        self.window["video"] = video
-        self.window.logger = logger or SimpleLogger(root=root, prefix=prefix)
-
-        # if logger.root_dir:
-        #     cprint(f"cmx root directory: {logger.root_dir}", color="green")
-
+        super().__init__()
+        self.logger = logger or SimpleLogger(root=root, prefix=prefix)
         self.config(filename=filename, overwrite=overwrite)
 
     def config(self, filename=None, overwrite=True, src_prefix=None, logger=None):
         self.overwrite = overwrite
-        self.window.logger = logger or self.window.logger
-        # todo: for gist, the prefix needs to go into the `src` attribute.
-        # self.window.src_prefix = src_prefix
+        self.logger = logger or self.logger
         if filename:
             self.__filename = filename
-
             if self.overwrite:
-                self.window.logger.log_text("", filename=self.filename, overwrite=True)
+                self.logger.log_text("", filename=self.filename, overwrite=True)
 
-            from termcolor import cprint
-            from urllib import parse
-
-            if self.window.logger.root.startswith("http"):
-                # just print the path, README.md should just show.
-                cprint("File output at " + self.window.logger.get_dash_url() + " " + self.__filename, "green")
+            if self.logger.root.startswith("http"):
+                print(_green("File output at " + self.logger.get_dash_url() + " " + self.__filename))
             else:
-                cprint("File output at file://" + parse.quote(os.path.realpath(self.__filename)), "green")
+                from urllib import parse
+
+                print(_green("File output at file://" + parse.quote(os.path.realpath(self.__filename))))
         return self
 
     def new(self, filename=None, **kwargs):
         if filename:
-            import os
-
             filename = os.path.abspath(filename)
-
-        doc = deepcopy(self).config(filename=filename, **kwargs)
-        return doc
+        return deepcopy(self).config(filename=filename, **kwargs)
 
     @property
     def filename(self):
         if self.__filename is None:
             import inspect
 
+            # Walk out of cmx's own frames to find the user's script.
             filename = "cmx/"
             frame = inspect.currentframe()
             while "cmx/" in filename or "importlib" in filename or "contextlib" in filename:
                 frame = frame.f_back
                 filename, line_number, function_name, lines, index = inspect.getframeinfo(frame)
 
-            # todo: '/__init__.py' instead?
             if filename.endswith("__init__.py"):
                 self.__filename = filename[:-11] + "README.md"
             else:
                 self.__filename = filename.replace(".py", ".md")
 
-            # # on first write:
             if self.overwrite:
                 self.clear()
 
-            from termcolor import cprint
             from urllib import parse
 
-            cprint("File output at file://" + parse.quote(self.__filename), "green")
+            print(_green("File output at file://" + parse.quote(self.__filename)))
 
         return self.__filename
 
     def write(self, text, overwrite=None):
-        filename = self.filename
-        if filename.startswith("/"):
-            filename = "/" + filename
-        self.window.logger.log_text(text, filename=filename, overwrite=overwrite)
+        self.logger.log_text(text, filename=self.filename, overwrite=overwrite)
 
     def clear(self):
         self.write("", overwrite=True)
 
     def __call__(self, *snippets, dedent=True, **kwargs):
-        """output text"""
-        t = components.Text(*snippets, dedent=dedent, **kwargs)
-        self.children.append(t)
+        """Add markdown text: ``doc("# Title")``."""
+        self.children.append(components.Text(*snippets, dedent=dedent, **kwargs))
         return self
-
-    def __matmul__(self, string_or_array):
-        """Support prefix @ syntax: doc @ "text" or doc @ '''text'''"""
-        if isinstance(string_or_array, tuple):
-            string, *rest = string_or_array
-            return self(string, *rest)
-
-        return self(string_or_array)
-
-    def __ror__(self, string_or_array):
-        """Support postfix pipe syntax: "text" | doc or '''text''' | doc"""
-        if isinstance(string_or_array, tuple):
-            string, *rest = string_or_array
-            return self(string, *rest)
-
-        return self(string_or_array)
-
-    def __or__(self, other):
-        """Support pipe operator for future extensions"""
-        # This allows for potential chaining like: doc | other_processor
-        raise NotImplementedError("Left-side pipe operator not yet implemented")
 
     md = __call__
 
-    # def text(self, *args, sep=" ", end="\n"):
-    #     t = components.Text(*args, sep=sep, end=end)
-    #     self.children.append(t)
-    #
-    # def link(self, href=None):
-    #     l = components.Link(href=href)
-    #     self.children.append(l)
+    def __matmul__(self, string_or_array):
+        """Prefix ``@`` syntax: ``doc @ "text"``."""
+        if isinstance(string_or_array, tuple):
+            string, *rest = string_or_array
+            return self(string, *rest)
+        return self(string_or_array)
 
-    # @property
-    # def pre(self, ):
-    #     def _pre(*args, sep=" ", lang=None):
-    #         p = components.Pre(sep.join([str(a) for a in args]), lang=lang)
-    #         self.children.append(p)
-    #
-    #     return _F(_pre, name="Pre")
+    def __ror__(self, string_or_array):
+        """Postfix pipe syntax: ``"text" | doc``."""
+        if isinstance(string_or_array, tuple):
+            string, *rest = string_or_array
+            return self(string, *rest)
+        return self(string_or_array)
 
-    @property
-    def yaml(self, data=None, **kwargs):
-        def _yaml(data, **kwargs):
-            import yaml
+    def __or__(self, other):
+        raise NotImplementedError("Left-side pipe operator not yet implemented")
 
-            s = yaml.dump(data).rstrip()
-            return self.pre(s, lang="yaml")
+    def pre(self, text, lang=None, **kwargs):
+        p = components.Pre(text, lang=lang, **kwargs)
+        self.children.append(p)
+        return p
 
-        return _F(_yaml, name="yaml")
+    def yaml(self, data, **kwargs):
+        import yaml
 
-    @property
-    def csv(
-        self,
-    ):
-        def _csv(csv, show_index=False, **kwargs):
-            return self.children.append(components.Table(csv, show_index=show_index, **kwargs))
+        return self.pre(yaml.dump(data).rstrip(), lang="yaml")
 
-        return _F(_csv, name="csv")
+    def csv(self, csv, show_index=False, **kwargs):
+        t = components.Table(csv, show_index=show_index, logger=self.logger, **kwargs)
+        self.children.append(t)
+        return t
 
     def print(self, *args, sep=" ", end="\n"):
+        # Coalesce consecutive prints into a single code block, and echo to stdout.
         if self.children and isinstance(self.children[-1], components.Print):
             self.children[-1].text += sep.join([str(a) for a in args]) + end
         else:
@@ -253,7 +173,6 @@ class CommonMark(components.Article):
         try:
             lines_in_block = get_block(filename, line_number + 1)
             text = "".join(lines_in_block)
-            # todo: change to self.code(, lang="python", ...)
             self.children.append(components.Pre(dedent(text).rstrip(), lang="python"))
         except FileNotFoundError:
             print("in iPython session")
@@ -263,12 +182,12 @@ class CommonMark(components.Article):
 
 
 class Github(CommonMark):
-    """uses tables for the layout"""
+    """Uses tables for the layout."""
 
     pass
 
 
 class Gist(CommonMark):
-    """saves everything inside a folder"""
+    """Saves everything inside a folder."""
 
     pass

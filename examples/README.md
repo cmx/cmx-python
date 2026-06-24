@@ -210,7 +210,7 @@ Older examples that may use deprecated APIs but still demonstrate core concepts.
 ## Getting Help
 
 - **Documentation**: https://cmx-python.readthedocs.io
-- **Quick Start**: https://cmx-python.readthedocs.io/en/latest/quick_start.html
+- **Quick Start**: https://cmx-python.readthedocs.io/en/latest/overview.html
 - **API Reference**: https://cmx-python.readthedocs.io/en/latest/api/
 - **Issues**: https://github.com/cmx/cmx-python/issues
 
