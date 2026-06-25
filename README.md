@@ -1,268 +1,170 @@
-# CMX - REPL with Python Scripts via Live Documents
+# CMX
 
 [![PyPI version](https://badge.fury.io/py/cmx.svg)](https://badge.fury.io/py/cmx)
 [![Documentation Status](https://readthedocs.org/projects/cmx-python/badge/?version=latest)](https://cmx-python.readthedocs.io/en/latest/?badge=latest)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-> Create live, interactive documentation directly from your Python scripts.
+Generate live Markdown documentation from Python scripts — you choose exactly what appears.
 
-**CMX** is a Python library that enables REPL-style documentation generation. It works like Jupyter notebooks but integrates directly into your Python scripts using context managers. Only code you include in a `with doc:` block appears in the output.
+CMX runs your script and captures the parts you mark, turning code and its output into a Markdown file. It works like a notebook, but you control what shows up: source, printed results, tables, images, and more. The core has zero third-party dependencies; richer blocks pull in small, opt-in extras.
 
-## Features
+## Installation
 
-- **Live Documentation**: Generate markdown/HTML/LaTeX from Python code execution
-- **Multiple Backends**: Markdown (GitHub-compatible), HTML, and LaTeX output
-- **Rich Components**: Tables, images, videos, figures, YAML output
-- **Context Management**: Use `with doc:` blocks to control what appears
-- **File Logging**: Built-in support for saving images, videos, and data
-- **Layout Control**: Arrange content horizontally with row layouts
-
-## Quick Start
-
-Install from PyPI:
+Install the core from PyPI. It needs no third-party packages:
 
 ```bash
 pip install cmx
 ```
 
-Create your first live document:
+Add extras only for the features you use:
+
+| Install | Pulls in | Enables |
+|---|---|---|
+| `pip install cmx` | nothing | text, operators, `doc.print`, `doc.pre`, capture, flush |
+| `pip install 'cmx[tables]'` | pandas | `doc.table`, `doc.csv` |
+| `pip install 'cmx[images]'` | pillow, numpy | array images, `doc.image` / `figure` / `video` |
+| `pip install 'cmx[figures]'` | matplotlib | `doc.savefig` |
+| `pip install 'cmx[yaml]'` | pyyaml | `doc.yaml` |
+| `pip install 'cmx[all]'` | all of the above | everything |
+
+CMX requires Python 3.11 or later.
+
+## Quick start
+
+Configure an output file, capture a block of code, then write it to disk. Create `report.py`:
 
 ```python
 from cmx import doc
 
-# Configure output (optional - auto-detects from script name)
-doc.config(filename="output.md")
-
-# Everything in 'with doc:' blocks appears in output
-with doc:
-    doc("# Hello, CMX!")
-
-    for i in range(10):
-        doc.print(i, end=' ')
-```
-
-Output in `output.md`:
-```python
-for i in range(10):
-    doc.print(i, end=' ')
-```
-```
-0 1 2 3 4 5 6 7 8 9
-```
-
-## Documentation
-
-Full documentation is available at: **https://cmx-python.readthedocs.io**
-
-- [Quick Start Guide](https://cmx-python.readthedocs.io/en/latest/overview.html)
-- [Development Guide](https://cmx-python.readthedocs.io/en/latest/development.html)
-- [API Reference](https://cmx-python.readthedocs.io/en/latest/api/)
-
-## Usage Examples
-
-### Basic Usage
-
-```python
-from cmx import doc
-
-doc.config(filename="output.md")
+doc.config(__file__)
 
 with doc:
-    doc("# Hello, CMX!")
-
-    for i in range(10):
-        doc.print(i, end=' ')
+    doc @ "# Daily Report"
+    total = sum(range(100))
+    doc.print(f"Sum of 0-99: {total}")
 
 doc.flush()
 ```
 
-### The @ Operator
+Run it with `python report.py`. CMX writes `report.md` next to the script:
 
-The `@` operator provides clean syntax for adding markdown (used extensively in vuer-ai repositories):
+````markdown
+# Daily Report
 
 ```python
-doc @ """
-# Experiment Report
-
-This is a clean way to add markdown content.
-"""
-
-with doc:
-    doc @ "## Results"
-    results = [1, 2, 3, 4, 5]
-    doc.print(f"Total: {sum(results)}")
+total = sum(range(100))
+doc.print(f"Sum of 0-99: {total}")
 ```
 
-### Tables
+```
+Sum of 0-99: 4950
+```
+````
 
-Display experiment results and metrics:
+The `with doc:` block captures its own source as a code fence and runs it; `doc.print` echoes to your terminal and appends the output. Code outside a `with doc:` block still runs — it just doesn't appear in the document.
+
+## Common patterns
+
+**Add text three equivalent ways.** Each appends a text block and returns `doc`:
+
+```python
+doc("## Results")          # call form
+doc @ "## Results"         # prefix @ operator
+"## Results" | doc         # postfix | operator
+```
+
+**Render a DataFrame** (needs `cmx[tables]`):
 
 ```python
 import pandas as pd
 
-data = pd.DataFrame({
-    'Model': ['ResNet50', 'VGG16', 'MobileNet'],
-    'Accuracy': [0.95, 0.87, 0.92],
-    'Parameters': ['25.6M', '138M', '4.2M']
-})
-
 with doc:
-    doc.table(data)
+    doc.table(pd.DataFrame({"model": ["a", "b"], "acc": [0.95, 0.87]}))
 ```
 
-### Images
+**Save and link an image** (needs `cmx[images]`). A bare filename lands in the document's figure folder; a path with a slash is used as written:
 
 ```python
 import numpy as np
 
-image = np.random.rand(100, 100, 3)
-
 with doc:
-    doc.image(image, src="figures/random.png")
+    doc.image(np.random.rand(64, 64, 3), src="sample.png")
 ```
 
-### YAML Configuration
+**Render a config dict as YAML** (needs `cmx[yaml]`):
 
 ```python
-config = {
-    'model': 'ResNet50',
-    'batch_size': 32,
-    'learning_rate': 0.001,
-    'optimizer': 'Adam'
-}
-
 with doc:
-    doc.yaml(config)
+    doc.yaml({"model": "ResNet50", "epochs": 100})
 ```
 
-### Hiding Setup Code
-
-Keep documentation clean by hiding boilerplate:
+**Hide setup, keep results.** `doc.hide` runs a block without showing it; variables it defines stay in scope:
 
 ```python
 with doc.hide:
-    # This code runs but doesn't appear in output
-    import numpy as np
-    data = load_experiment_data()
+    data = load_results()
 
-with doc:
-    doc @ "## Analysis Results"
-    doc.print(f"Mean: {data.mean():.4f}")
-```
-
-### Complete Workflow Example
-
-```python
-from cmx import doc
-import pandas as pd
-
-doc.config(filename="experiment_report.md")
-
-doc @ """
-# Experiment Report
-**Date**: 2024-01-15
-"""
-
-# Hidden setup
-with doc.hide:
-    results = load_results()
-
-# Configuration
-with doc:
-    doc @ "## Configuration"
-    doc.yaml({'model': 'ResNet50', 'epochs': 100})
-
-# Results table
-with doc:
-    doc @ "## Results"
-    df = pd.DataFrame(results)
-    doc.table(df)
-
-# Analysis
 with doc:
     doc @ "## Analysis"
-    best = df['accuracy'].max()
-    doc.print(f"Best accuracy: {best:.2%}")
-
-doc.flush()
+    doc.print(f"Best: {data['accuracy'].max():.2%}")
 ```
 
-More examples in the [`examples/core/`](examples/core/) directory, including:
-- Basic usage patterns
-- Tables and data display
-- Image handling
-- YAML configuration output
-- Experiment analysis workflows
-- Complete reporting examples
+## Documentation
 
-See [`examples/core/README.md`](examples/core/README.md) for detailed explanations.
+Full documentation: **https://cmx-python.readthedocs.io**
+
+- [Get started](https://cmx-python.readthedocs.io/en/latest/overview.html) — the config → capture → flush workflow.
+- [Configuration](https://cmx-python.readthedocs.io/en/latest/configuration.html) — where Markdown and assets are written.
+- [Adding text](https://cmx-python.readthedocs.io/en/latest/markdown.html), [Tables](https://cmx-python.readthedocs.io/en/latest/tables.html), [Images](https://cmx-python.readthedocs.io/en/latest/images.html).
+- [API reference](https://cmx-python.readthedocs.io/en/latest/api/).
+
+Runnable examples live in [`examples/core/`](examples/core/) — see its [README](examples/core/README.md).
 
 ## Development
 
-Set up a development environment:
-
 ```bash
-# Clone the repository
 git clone https://github.com/cmx/cmx-python.git
 cd cmx-python
+pip install -e '.[dev,docs]'   # editable install with test + docs tooling
 
-# Install in development mode
-make dev
-
-# Run tests
-make test
-
-# Preview documentation
-make preview
+make test       # run the pytest suite
+make preview    # live-reload docs at http://localhost:8000
+make docs       # build the HTML docs
 ```
 
-## Claude Code Skills
+See the [Development guide](https://cmx-python.readthedocs.io/en/latest/development.html) for the full workflow.
 
-CMX includes Claude Code skills for enhanced assistance when working with the library. The skills are located in `.claude-plugin/` and provide guidance on:
+## Claude Code plugin
 
-- Basic usage patterns
-- Component usage (tables, images, videos, etc.)
-- Advanced features and best practices
+CMX ships a Claude Code plugin in [`.claude-plugin/`](.claude-plugin/) with skills that guide Claude through CMX's API and component usage when you work on a CMX project.
 
-## Publishing
-
-Build and publish to PyPI:
-
-```bash
-# Update VERSION file
-echo "0.0.47" > VERSION
-
-# Build and publish
-make publish
-```
-
-## Project Structure
+## Project structure
 
 ```
 cmx-python/
-├── src/cmx/              # Main package source
-├── docs/                 # Sphinx documentation
-├── examples/             # Example scripts
-│   ├── three/           # 3D visualization examples
-│   └── old_demos/       # Legacy examples
-├── tests/               # Test suite
-├── .claude-plugin/      # Claude Code skills
-├── pyproject.toml       # Project configuration
-├── Makefile            # Build automation
-└── README.md           # This file
+├── src/cmx/
+│   ├── backends/        # markdown, components, md_table, html, latex
+│   └── server/          # optional server stub
+├── docs/                # Sphinx + MyST documentation
+├── examples/core/       # numbered tutorial examples
+├── tests/               # pytest suite + golden-file harness
+├── .claude-plugin/      # Claude Code plugin
+├── pyproject.toml       # project configuration
+└── Makefile             # build automation
 ```
 
 ## Contributing
 
-Contributions are welcome! Please see the [Development Guide](https://cmx-python.readthedocs.io/en/latest/development.html) for details.
+Contributions are welcome. See the [Development guide](https://cmx-python.readthedocs.io/en/latest/development.html) for setup, tests, and the publishing flow.
+
+## Authors
+
+- Ge Yang
+- Tom Tao
 
 ## License
 
-MIT License - see [LICENSE](LICENSE) file for details.
-
-## Author
-
-Ge Yang (ge.ike.yang@gmail.com)
+MIT — see [LICENSE](LICENSE).
 
 ## Links
 

@@ -10,7 +10,8 @@ license = { text = "MIT" }
 readme = "README.md"
 requires-python = ">=3.11"
 authors = [
-    { name = "Ge Yang", email = "ge.ike.yang@gmail.com" }
+    { name = "Ge Yang" },
+    { name = "Tom Tao" },
 ]
 keywords = ["documentation", "markdown", "jupyter", "notebooks", "live-documentation", "repl"]
 classifiers = [

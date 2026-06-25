@@ -22,13 +22,15 @@ Training finished. Results follow.
 
 ## The three equivalent forms
 
-There are three ways to append a text block. They do the same thing — append a `Text` block and return `doc` — so you can chain further calls off any of them.
+There are three ways to append a text block. They do the same thing — append a `Text` block (with `end="\n"` by default) and return `doc` — so you can chain further calls off any of them.
 
 ```python
-doc("# Title")        # call form
-doc @ "# Title"       # prefix @ operator
-"# Title" | doc       # postfix | operator
+doc("# Title", end="\n")   # call form (end="\n" is the default)
+doc @ "# Title"            # prefix @ operator
+"# Title" | doc            # postfix | operator
 ```
+
+Every block ends with `end="\n"` unless you override it on the call form — see [Controlling line endings](controlling-line-endings) below.
 
 A tuple spreads into one block per item:
 
@@ -67,6 +69,7 @@ The model converged after 12 epochs.
 
 The leading spaces from the source indentation are gone, but the blank lines and list structure are preserved.
 
+(controlling-line-endings)=
 ## Controlling line endings with `end=`
 
 Each text block ends with a single newline by default (`end="\n"`). Pass `end=` on the call form to change it. Only the trailing run of newlines is replaced — newlines inside the block are left alone.
