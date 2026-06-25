@@ -1,78 +1,105 @@
-# Context Managers
+# Context managers
 
-**Questions**
-- How do I control what appears in the documentation?
-- How do I hide setup code?
-- How do I skip sections during development?
+*Control what appears in your document using `with doc:`, `doc.hide`, and `doc.skip`.*
 
-**Objectives**
-- Learn to use `with doc:` for documentation
-- Use `doc.hide` to hide setup code
-- Use `doc.skip` to skip sections
+CMX gives you three context managers for deciding what lands in the rendered Markdown. `with doc:` captures and runs a block. `doc.hide` runs a block without showing it. `doc.skip` skips a block entirely.
 
-## The `with doc:` Pattern
+## Capture and run a block — `with doc:`
 
-Only code inside `with doc:` blocks appears in the output:
+A `with doc:` block captures its own source as a Python code fence, then runs it. The captured source and any `doc.print` output appear in the document, in order.
 
 ```python
 from cmx import doc
 
-doc.config(filename="report.md")
+doc.config(__file__)
 
-# This code runs but doesn't appear
-data = [10, 20, 30, 40, 50]
-mean = sum(data) / len(data)
-
-# This code appears in the output
 with doc:
-    doc @ "# Analysis"
+    data = [10, 20, 30, 40, 50]
+    mean = sum(data) / len(data)
     doc.print(f"Mean: {mean}")
 
 doc.flush()
 ```
 
-## Hiding Setup Code
+The output shows the block's source followed by its printed result:
 
-Use `doc.hide` to run code without showing it:
+````markdown
+```python
+data = [10, 20, 30, 40, 50]
+mean = sum(data) / len(data)
+doc.print(f"Mean: {mean}")
+```
+
+```
+Mean: 30.0
+```
+````
+
+Code outside any `with doc:` block still runs — it just doesn't appear in the document. The block is what you show; the surrounding script is what you don't.
+
+## Run code without showing it — `doc.hide`
+
+Use `doc.hide` for setup you want executed but not displayed: imports, data loading, expensive computations, helper definitions. The body runs, its source is not captured, and any variables you define inside remain in scope afterward.
 
 ```python
 with doc.hide:
-    # Load data, imports, expensive computations
     import numpy as np
+
     data = np.random.randn(1000)
     mean = data.mean()
     std = data.std()
 
 with doc:
-    doc @ "## Results"
+    doc @ "### Summary Statistics"
     doc.print(f"Mean: {mean:.4f}")
     doc.print(f"Std:  {std:.4f}")
 ```
 
-The output shows only the results, not the setup.
+The document shows only the second block — the statistics and their output — while `mean` and `std`, defined in the hidden block, are still available to use:
 
-## Skipping Sections
+````markdown
+```python
+doc @ "### Summary Statistics"
+doc.print(f"Mean: {mean:.4f}")
+doc.print(f"Std:  {std:.4f}")
+```
 
-Use `doc.skip` to skip sections during development:
+### Summary Statistics
+
+```
+Mean: 0.0390
+Std:  0.9869
+```
+````
+
+Because hidden variables persist, you can define a helper in one `doc.hide` block and call it from a later visible block.
+
+```python
+with doc.hide:
+    def helper_function():
+        return "computed without clutter"
+
+    result = helper_function()
+
+with doc:
+    doc.print(result)
+```
+
+## Skip a block entirely — `doc.skip`
+
+Use `doc.skip` to keep a block in your script without running it. Nothing inside executes, and nothing appears in the document. This is handy while iterating: park an expensive section behind `doc.skip` until you're ready for it.
 
 ```python
 with doc.skip:
-    # This code doesn't run at all
     expensive_computation()
     doc @ "This won't appear"
 ```
 
-This is useful when iterating on specific parts of a document.
+```{warning}
+`doc.skip` skips execution using a frame-tracing trick. This can interfere with debuggers that rely on the same mechanism, such as PyCharm's pydev. Avoid `doc.skip` when stepping through code under a debugger.
+```
 
-## Key Points
+## Next steps
 
-- Use `with doc:` to include code in output
-- Use `doc.hide` to run code without showing it
-- Use `doc.skip` to skip execution entirely
-- Code outside all blocks runs but doesn't appear
-
-## Next Steps
-
-- [Markdown](markdown.md) - Add text with @ and | operators
-- [Tables](tables.md) - Display data
-- [Images](images.md) - Add visualizations
+- [Overview](overview.md) — The config → capture → flush workflow these blocks fit into.
+- [Printing](printing.md) — Add computed output with `doc.print()` inside your blocks.

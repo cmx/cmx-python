@@ -1,281 +1,180 @@
-# Development Guide
+# Development
 
-This guide covers how to set up a development environment, contribute to CMX, and publish new releases.
+Set up a dev environment, run the tests, build the docs, and publish a release.
 
-## Setting Up Development Environment
+## Setup
 
-### Clone the Repository
+Clone the repository and install it in editable mode with the dev extra.
 
 ```bash
 git clone https://github.com/cmx/cmx-python.git
 cd cmx-python
+pip install -e '.[dev]'
 ```
 
-### Install Development Dependencies
+The `dev` extra pulls Black, Pylint, pytest, pandas, and tabulate. The core package itself has no runtime dependencies — those tools are for development only.
 
-Install the package in development mode with all dependencies:
+To work on the documentation as well, add the `docs` extra:
 
 ```bash
-make dev
+pip install -e '.[docs]'
 ```
 
-This will:
-1. Build a wheel distribution
-2. Install it with `pip install --ignore-installed`
+:::{note}
+`tabulate` ships in the `dev` extra as a test oracle, not a runtime dependency. The golden parity tests compare CMX's pure-Python table renderer (`cmx.backends.md_table`) against `tabulate` output. CMX never imports `tabulate` at runtime for the default `github` table format.
+:::
 
-Alternatively, you can install manually:
+## Workflow
+
+The `Makefile` wraps the common tasks:
+
+| Command | What it does |
+|---|---|
+| `make test` | Run the full pytest suite |
+| `make preview` | Serve the docs with live reload on `http://localhost:8888` |
+| `make docs` | Build the HTML docs and serve them once |
+| `make wheel` | Build a wheel into `dist/` |
+| `make dev` | Build a wheel and install it with `--ignore-installed` |
+| `make publish` | Convert the README, run tests, build, and upload to PyPI |
+| `make release` | Tag the release and push tags to GitHub |
+
+## Project structure
+
+```
+cmx-python/
+├── src/
+│   └── cmx/                  # Package source (dependency-free core)
+│       ├── __init__.py       # Exports `doc`, `md`, `data`
+│       ├── data.py           # Data utilities
+│       ├── utils.py          # Path resolution and helpers
+│       ├── with_hack.py      # Frame-tracing for `with doc.hide:` / `doc.skip`
+│       ├── backends/
+│       │   ├── markdown.py    # Markdown renderer
+│       │   ├── components.py  # Block types (Table, Figure, Row, ...)
+│       │   ├── md_table.py    # Pure-Python github-format table renderer
+│       │   ├── html.py        # HTML backend (stub)
+│       │   └── latex.py       # LaTeX backend (stub)
+│       └── server/           # Optional Sanic server (out-of-scope stub)
+├── docs/                     # Sphinx + MyST + furo documentation
+│   ├── conf.py
+│   ├── index.md
+│   ├── development.md        # This file
+│   └── api/                  # Autodoc reference
+├── examples/                 # Example scripts
+├── tests/                    # pytest suite (includes the golden harness)
+├── pyproject.toml            # Project + tool configuration
+├── Makefile                  # Build automation
+└── VERSION                   # Version number
+```
+
+`backends/html.py` and `backends/latex.py` are present but empty stubs — Markdown is the only complete backend. The `server/` package is an optional Sanic stub behind the `server` extra and is not test-verified.
+
+## Making changes
+
+1. Branch off `main`:
+   ```bash
+   git checkout -b feature/my-change
+   ```
+2. Make your changes under `src/cmx/`.
+3. Add or update tests in `tests/`.
+4. Update the docs in `docs/` if behavior changed.
+5. Format and test before committing:
+   ```bash
+   black src/cmx tests examples
+   make test
+   ```
+
+Black is configured with a 120-character line length in `pyproject.toml`. Pylint config lives there too; run it with `pylint src/cmx`.
+
+## Testing
+
+Run the suite with pytest (90 tests):
 
 ```bash
-pip install -e ".[dev]"
+pytest
 ```
 
-## Development Workflow
+`make test` runs the same suite with `--capture=no` so prints stream live.
 
-### Running Tests
+### The golden harness
 
-Run the test suite using pytest:
+`tests/test_golden.py` renders example documents and compares the output byte-for-byte against committed master `.md` files. When you intentionally change rendered output, refresh the masters by setting `UPDATE_GOLDEN=1`:
 
 ```bash
-make test
+UPDATE_GOLDEN=1 pytest tests/test_golden.py
 ```
 
-Or run pytest directly:
+Review the resulting diff before committing — the regenerated masters become the new source of truth.
 
-```bash
-python -m pytest tests --capture=no
-```
+:::{tip}
+`tests/test_md_table.py` checks the `md_table` renderer against `tabulate` for parity. If you touch the table renderer, run it directly: `pytest tests/test_md_table.py`.
+:::
 
-### Code Quality
+## Building docs
 
-The project uses several tools for code quality:
-
-#### Black (Code Formatting)
-
-Format your code with Black (line length: 120):
-
-```bash
-black src/cmx tests examples
-```
-
-#### Pylint (Linting)
-
-Check code quality with Pylint:
-
-```bash
-pylint src/cmx
-```
-
-#### Pyright (Type Checking)
-
-The project includes Pyright configuration in `pyproject.toml`. Configure your IDE to use it for type checking.
-
-### Building Documentation
-
-#### Local Preview
-
-Preview documentation locally with auto-reload:
+The site is Sphinx with MyST Markdown and the furo theme. Preview locally with live reload:
 
 ```bash
 make preview
 ```
 
-This starts a server at `http://localhost:8888` that automatically rebuilds when you change documentation files.
-
-#### Build HTML Documentation
-
-Build the documentation without starting a server:
+This serves `http://localhost:8888` and rebuilds on every save. To produce a static build:
 
 ```bash
 make docs
 ```
 
-The built documentation will be in `docs/_build/html/`.
-
-## Project Structure
-
-```
-cmx-python/
-├── src/
-│   └── cmx/              # Main package source code
-│       ├── __init__.py
-│       ├── backends/     # Output backends (Markdown, HTML, LaTeX)
-│       ├── data.py       # Data utilities
-│       ├── server/       # Server components
-│       ├── utils.py      # Utility functions
-│       └── with_hack.py  # Context manager utilities
-├── docs/                 # Sphinx documentation
-│   ├── conf.py          # Sphinx configuration
-│   ├── index.md         # Documentation home page
-│   ├── overview.md      # Quick start guide
-│   ├── development.md   # This file
-│   └── api/             # API documentation
-├── examples/            # Example scripts
-│   ├── old_demos/       # Legacy examples
-│   └── three/           # 3D visualization examples
-├── tests/               # Test suite
-├── .claude-plugin/      # Claude Code skills
-├── pyproject.toml       # Project configuration
-├── Makefile            # Build automation
-└── VERSION             # Version number
-```
-
-## Making Changes
-
-### Adding New Features
-
-1. Create a new branch for your feature:
-   ```bash
-   git checkout -b feature/my-new-feature
-   ```
-
-2. Implement your changes in `src/cmx/`
-
-3. Add tests in `tests/`
-
-4. Update documentation in `docs/`
-
-5. Run tests to ensure everything works:
-   ```bash
-   make test
-   ```
-
-6. Format your code:
-   ```bash
-   black src/cmx tests
-   ```
-
-### Adding Examples
-
-Add example scripts to the `examples/` directory:
-
-```python
-# examples/my_example.py
-from cmx import doc
-
-doc.config(filename="examples/my_example.md")
-
-with doc:
-    doc("# My Example")
-    doc.print("Hello from my example!")
-```
+The HTML lands in `docs/_build/html/`.
 
 ## Publishing
 
-### Building a Release
-
-1. Update the version in `VERSION` file:
+1. Bump the version:
    ```bash
-   echo "0.0.47" > VERSION
+   echo "0.0.48" > VERSION
+   ```
+2. Update `docs/CHANGE_LOG.md`.
+3. Build, test, and upload to PyPI:
+   ```bash
+   make publish
+   ```
+   This converts the README to reStructuredText, runs the tests, builds the wheel, and uploads with twine. You need PyPI credentials configured.
+4. Tag and push the release:
+   ```bash
+   make release msg="Release version 0.0.48"
    ```
 
-2. Update the changelog in `docs/CHANGE_LOG.md`
-
-3. Build the wheel:
-   ```bash
-   make wheel
-   ```
-
-### Publishing to PyPI
-
-Publish the package to PyPI:
-
-```bash
-make publish
-```
-
-This will:
-1. Convert README.md to reStructuredText
-2. Run tests
-3. Build the wheel
-4. Upload to PyPI using twine
-
-**Note**: You need PyPI credentials configured. Set them up with:
-```bash
-pip install twine
-```
-
-### Creating a Release Tag
-
-Tag the release and push to GitHub:
-
-```bash
-make release msg="Release version 0.0.47"
-```
-
-This creates a git tag and pushes it to the remote repository.
+:::{warning}
+`make publish` uploads to the live PyPI index. Run `make test` and verify the wheel locally with `make dev` before publishing.
+:::
 
 ## Contributing
 
-### Pull Request Process
+1. Fork the repository and create a feature branch.
+2. Make your change with tests and docs.
+3. Run `black` and `make test`.
+4. Open a pull request with a clear, descriptive title.
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests and documentation
-5. Ensure all tests pass
-6. Submit a pull request
-
-### Code Style Guidelines
-
-- Follow PEP 8 (enforced by Black with 120 character line length)
-- Add docstrings to all public functions and classes
-- Include type hints where appropriate
-- Keep functions focused and simple
-- Add comments for complex logic
-
-### Commit Message Guidelines
-
-Use clear, descriptive commit messages:
-
-- **Good**: "Add support for video embedding in markdown backend"
-- **Bad**: "Fixed stuff"
+Keep commit messages specific — "Add video embedding to the markdown backend" rather than "Fixed stuff". Add docstrings and type hints to public functions.
 
 ## Troubleshooting
 
-### Import Errors After Installation
-
-If you get import errors after installing in development mode, try:
+**Import errors after editable install.** Reinstall cleanly:
 
 ```bash
 pip uninstall cmx
-make dev
+pip install -e '.[dev]'
 ```
 
-### Documentation Build Errors
+**Docs fail to build.** Make sure the `docs` extra is installed and clear the build cache:
 
-If documentation fails to build:
+```bash
+pip install -e '.[docs]'
+rm -rf docs/_build
+make docs
+```
 
-1. Check that all dependencies are installed:
-   ```bash
-   pip install -r docs/requirements.txt
-   ```
+**Tests fail on import.** Confirm the dev extra is installed (`pip install -e '.[dev]'`), then rerun with verbose output: `pytest -v`.
 
-2. Clean the build directory:
-   ```bash
-   rm -rf docs/_build
-   ```
+## Next steps
 
-3. Try building again:
-   ```bash
-   make docs
-   ```
-
-### Test Failures
-
-If tests fail:
-
-1. Check that all dependencies are installed:
-   ```bash
-   pip install -e ".[dev]"
-   ```
-
-2. Run tests with verbose output:
-   ```bash
-   python -m pytest tests -v
-   ```
-
-## Getting Help
-
-- **Issues**: Report bugs on [GitHub Issues](https://github.com/cmx/cmx-python/issues)
-- **Discussions**: Ask questions in [GitHub Discussions](https://github.com/cmx/cmx-python/discussions)
-- **Email**: Contact the maintainer at yangge1987@gmail.com
+- [API reference](api/index.md) — the autodoc reference for every module, including `cmx.backends.md_table`.
