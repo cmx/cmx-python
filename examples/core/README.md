@@ -69,6 +69,21 @@ This directory contains comprehensive examples demonstrating real-world CMX usag
 
 **Key takeaway:** Shows how to create professional, publication-ready experiment reports.
 
+### 09. Operator Syntax (`09_operator_syntax.py`)
+**What it demonstrates:**
+- The `@` prefix and `|` postfix operators for adding markdown
+- Mixing operator styles in a single document
+
+**Key takeaway:** CMX offers several equivalent syntaxes for inserting markdown - pick the one that reads best.
+
+### 10. Matplotlib Figures (`10_matplotlib_figures.py`)
+**What it demonstrates:**
+- Saving the current matplotlib figure with `doc.savefig(...)`
+- Forwarding `dpi`, `bbox_inches`, and `transparent` to matplotlib's `savefig`
+- Building a figure table (a grid of plots) with `table.figure_row()` + `row.savefig(...)`
+
+**Key takeaway:** `doc.savefig` is `plt.savefig` that also writes the markdown - layout kwargs stay in the document, everything else goes to matplotlib.
+
 ## Running the Examples
 
 To run these examples, you need to have CMX installed:
@@ -107,6 +122,8 @@ Each example generates a corresponding `.md` file:
 - `06_hiding_code.md` - Hidden code blocks
 - `07_experiment_analysis.md` - Experiment reporting
 - `08_comprehensive.md` - Complete workflow example
+- `09_operator_syntax.md` - Operator syntax demo
+- `10_matplotlib_figures.md` - Matplotlib figures, dpi, and figure tables
 
 ## Tips for Using CMX
 

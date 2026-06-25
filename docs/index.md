@@ -48,6 +48,7 @@ context
 
 tables
 images
+figures
 yaml
 ```
 
