@@ -1,232 +1,199 @@
 # CMX Components Skill
 
-This skill provides detailed guidance on using CMX's rich components for creating comprehensive documentation.
+This skill provides detailed guidance on CMX's rich components for building documentation. CMX renders to **Markdown** (the backend), with partial HTML rendering for some components (rows, videos).
 
 ## Component Overview
 
-CMX provides several component types for different content:
+- **Text**: prose via `@` / `|` / call forms
+- **Print**: `print`-style output, coalesced into code blocks
+- **Pre / YAML**: raw and YAML code blocks
+- **Table**: tabular data from DataFrames, CSV, or files
+- **Image**: array or file images, auto-saved through `on_save`
+- **Figure / Savefig**: images and matplotlib figures with titles/captions
+- **Video**: video and GIF embedding
+- **Row**: horizontal layout container
 
-- **Text & Print**: Text output
-- **Table**: Tabular data from DataFrames or CSV
-- **Image**: Image embedding with auto-save
-- **Video**: Video and GIF embedding
-- **Figure**: Images with captions and titles
-- **YAML**: Structured data display
-- **Layout**: Row containers for horizontal arrangement
+Each rich block requires an extra (see the basics skill): tables need `cmx[tables]` (pandas), images need `cmx[images]` (pillow+numpy), `savefig` needs `cmx[figures]` (matplotlib), yaml needs `cmx[yaml]`. The core is dependency-free.
 
 ## Text Components
 
-### Print Component
-
-Works like Python's built-in `print()`:
+### Markdown Text — three equivalent forms
 
 ```python
 from cmx import doc
 
-with doc:
-    doc.print("Single line")
-    doc.print("Multiple", "arguments", sep="-")
-    doc.print("No newline", end='')
-    doc.print(" continues here")
+doc.config(__file__)
+
+doc("# Heading 1", end="\n")   # call form (end="\n" is the default)
+doc @ "## Heading 2"           # prefix @ operator
+"**Bold** and *italic*" | doc  # postfix | operator
 ```
 
-Output:
-```
-Single line
-Multiple-arguments
-No newline continues here
-```
+All three append a text block and return `doc`. `doc.md` is an alias for the call form. Only the call form accepts keywords such as `end=`; use `end=""` to keep the next block on the same line. A tuple spreads into one block per item: `doc @ ("First.", "Second.")`. The left-side pipe `doc | other` raises `NotImplementedError`. Text is dedented by default (`dedent=True`).
 
-### Markdown Text
+### Print Component
 
-Add raw markdown using `doc()` or `doc.md()`:
+Works like Python's `print()`, and also echoes to stdout:
 
 ```python
 with doc:
-    doc("# Heading 1")
-    doc("## Heading 2")
-    doc("**Bold** and *italic* text")
-    doc("- List item 1")
-    doc("- List item 2")
+    doc.print("Single line")
+    doc.print("Multiple", "arguments", sep="-")
+    doc.print("No newline", end="")
+    doc.print(" continues here")
+```
+
+**Coalescing:** consecutive `doc.print` calls merge into a single code block. Any non-print block in between starts a fresh code block.
+
+## Pre and YAML
+
+`doc.pre(text, lang=None)` emits a raw fenced code block. `doc.yaml` renders a Python object as a YAML code block, or reads a `.yaml` file from disk verbatim (comments and all):
+
+```python
+config = {"model": {"name": "ResNet50", "layers": 50}}
+
+doc("# Configuration")
+doc.yaml(config)               # dump a Python object
+doc.yaml(file="conf.yaml")     # show a YAML file verbatim
+```
+
+```yaml
+model:
+  name: ResNet50
+  layers: 50
 ```
 
 ## Table Component
 
-Display DataFrames or CSV data as markdown tables:
+Render DataFrames or CSV data as Markdown tables (needs `cmx[tables]`). CMX inserts a blank line before each table automatically.
 
 ```python
 import pandas as pd
 from cmx import doc
 
-# From DataFrame
+doc.config(__file__)
+
 df = pd.DataFrame({
-    'Name': ['Alice', 'Bob', 'Charlie'],
-    'Age': [25, 30, 35],
-    'Score': [95, 87, 92]
+    "Name": ["Alice", "Bob", "Charlie"],
+    "Age": [25, 30, 35],
+    "Score": [95, 87, 92],
 })
 
-with doc:
-    doc("# Results Table")
-    doc.table(df, show_index=False)
+doc("# Results Table")
+doc.table(df, show_index=False)   # show_index defaults to False
 ```
 
-Output:
-```markdown
-| Name    | Age | Score |
-|---------|-----|-------|
-| Alice   | 25  | 95    |
-| Bob     | 30  | 87    |
-| Charlie | 35  | 92    |
+The default `format="github"` is rendered by CMX's built-in pure-Python renderer (`cmx.backends.md_table`) and needs only pandas. Other formats fall back to pandas' `to_markdown` and require `tabulate`:
+
+```python
+doc.table(df, format="grid")   # needs `pip install tabulate`
+doc.table(df, format="pipe")   # needs `pip install tabulate`
+```
+
+### CSV strings and files
+
+`doc.csv` renders a CSV string directly; `doc.table` accepts the same string. To load from disk, pass `file=` — the extension is inferred (csv / tsv / json / parquet / excel / yaml):
+
+```python
+doc.csv("Model,Accuracy\nResNet50,0.95\nVGG16,0.87")
+
+doc.table(file="data.csv")       # also .tsv / .json / .parquet / .xlsx / .yaml
+doc.table(file="metrics.parquet")
 ```
 
 ## Image Component
 
-Save and display images:
+Save numpy arrays or reference existing files (needs `cmx[images]`). Saving creates directories automatically.
 
 ```python
 import numpy as np
 from cmx import doc
 
-# Create or load image data
-image = np.random.rand(100, 100, 3)  # RGB image
+doc.config(__file__)
+
+# RGB array: (height, width, 3), uint8 0–255
+image = (np.random.rand(100, 100, 3) * 255).astype(np.uint8)
 
 with doc:
-    # Save and display
-    doc.image(image, src="figures/random.png")
-
-    # With normalization
-    doc.image(image, src="figures/normalized.png", normalize=True)
-
-    # Just display existing image
-    doc.image(src="figures/existing.png", width="50%")
+    doc.image(image, src="random.png")              # bare name -> figdir/random.png
+    doc.image(image, src="random.png", normalize=True)
+    doc.image(src="existing.png")                   # reference a file, no array
 ```
 
-### Image Attributes
+### Image arguments (verified against `components.py`)
 
-- `image`: NumPy array (optional if `src` points to existing file)
-- `src`: Path to save/load image
-- `normalize`: Normalize pixel values to [0, 255]
-- `width`, `height`: Size attributes (CSS values like "50%" or "300px")
+- `image` — numpy array (omit it to reference an existing file via `src`).
+- `src` — asset path. A **bare name** lands under `figdir`; a name **with a slash** is used as-is. With no `src`, an array is inlined as a base64 `data:` URI.
+- `normalize` — forwarded to the saver to normalize pixel values.
+
+Note: `width` / `height` / `style` / `class_name` are **not** parameters of `doc.image` — do not pass them. (`doc.savefig` and `doc.figure` do accept `width` / `height` / `zoom`; see below.)
 
 ## Figure Component
 
-Images with titles and captions:
+`doc.figure` attaches a `title` and/or `caption` to an image. Same array-or-`src` rules as `doc.image`:
 
 ```python
-from cmx import doc
-import matplotlib.pyplot as plt
-
-# Create a plot
-plt.figure(figsize=(8, 6))
-plt.plot([1, 2, 3, 4], [1, 4, 9, 16])
-plt.xlabel('X axis')
-plt.ylabel('Y axis')
-
 with doc:
     doc.figure(
-        src="figures/plot.png",
-        title="Quadratic Function",
-        caption="Plot showing y = x²",
-        width="80%"
+        gradient,                 # array, or omit and pass src=
+        src="gradient.png",
+        title="Gradient",
+        caption="A horizontal color ramp.",
     )
 ```
 
-### Using Savefig
+### Savefig — save the current matplotlib figure
 
-Directly save the current matplotlib figure:
+`doc.savefig(key)` saves the **current** matplotlib figure and links it (needs `cmx[figures]`). The `key` resolves through `figdir` just like image `src`.
 
 ```python
 import matplotlib.pyplot as plt
 from cmx import doc
 
-plt.plot([1, 2, 3], [1, 2, 3])
+doc.config(__file__)
+
+plt.plot([1, 2, 3], [1, 4, 9])
 
 with doc:
-    doc.savefig("figures/simple.png", caption="A simple line plot")
+    doc.savefig("plot.png", caption="A simple line plot")
 ```
+
+`doc.savefig` accepts `caption`, `width`, `height`, `zoom`; any other keyword (`dpi`, `bbox_inches`, `transparent`, `facecolor`, `format`, ...) is forwarded straight to matplotlib's `savefig` and is **not** leaked into the `<img>` tag.
 
 ## Video Component
 
-Embed videos and GIFs:
+Embed videos and GIFs (frame arrays need `cmx[images]`):
 
 ```python
 import numpy as np
 from cmx import doc
 
-# Create video frames (T, H, W, C)
 frames = np.random.randint(0, 255, (30, 100, 100, 3), dtype=np.uint8)
 
 with doc:
-    # Save and display as GIF
-    doc.video(frames, src="videos/animation.gif")
-
-    # Display existing video
-    doc.video(src="videos/demo.mp4", width="640", height="480")
+    doc.video(frames, src="animation.gif")   # .gif renders as an Image
+    doc.video(src="demo.mp4")                # .mp4 renders as HTML5 <video>
 ```
 
-### Video Formats
+`.gif` sources render as an `Image` (works everywhere); other extensions render as an HTML5 `<video>` (shown only where HTML is rendered). The `src` resolves through `figdir` like other assets.
 
-- `.gif`: Displays as an image (works everywhere)
-- `.mp4`, `.webm`: Displays as HTML5 video (HTML backend only)
+## Layout — `doc.row()`
 
-## YAML Component
-
-Display structured data in YAML format:
-
-```python
-from cmx import doc
-
-config = {
-    'model': {
-        'name': 'ResNet50',
-        'layers': 50,
-        'pretrained': True
-    },
-    'training': {
-        'batch_size': 32,
-        'learning_rate': 0.001,
-        'epochs': 100
-    }
-}
-
-with doc:
-    doc("# Configuration")
-    doc.yaml(config)
-```
-
-Output:
-```yaml
-model:
-  name: ResNet50
-  layers: 50
-  pretrained: true
-training:
-  batch_size: 32
-  learning_rate: 0.001
-  epochs: 100
-```
-
-## Layout Components
-
-### Row Layout
-
-Arrange components horizontally (HTML backend):
+`doc.row()` is a **method call** (`with doc.row():`, not `with doc.row:`). It arranges its children in a horizontal flex container (an HTML `<div>`, so layout shows where HTML is rendered; the images themselves still render in plain Markdown).
 
 ```python
 import numpy as np
 from cmx import doc
 
-img1 = np.random.rand(100, 100, 3)
-img2 = np.random.rand(100, 100, 3)
+doc.config(__file__)
 
 with doc:
     doc("# Side-by-side Images")
-    with doc.row:
-        doc.image(img1, src="img1.png")
-        doc.image(img2, src="img2.png")
+    with doc.row():
+        for i in range(3):
+            img = (np.random.rand(50, 50, 3) * 255).astype(np.uint8)
+            doc.image(img, src=f"mini_{i}.png")
 ```
-
-Note: Row layouts use HTML and work best in rendered markdown or HTML output.
 
 ## Advanced Usage
 
@@ -237,15 +204,12 @@ from cmx import doc
 import pandas as pd
 import matplotlib.pyplot as plt
 
-# Data
-data = pd.DataFrame({
-    'x': range(10),
-    'y': [i**2 for i in range(10)]
-})
+doc.config(__file__)
 
-# Plot
+data = pd.DataFrame({"x": range(10), "y": [i**2 for i in range(10)]})
+
 plt.figure(figsize=(10, 6))
-plt.plot(data['x'], data['y'])
+plt.plot(data["x"], data["y"])
 
 with doc:
     doc("# Analysis Results")
@@ -254,76 +218,46 @@ with doc:
     doc.table(data)
 
     doc("## Visualization")
-    doc.savefig("figures/analysis.png", caption="Quadratic growth pattern")
+    doc.savefig("analysis.png", caption="Quadratic growth")
 
     doc("## Summary Statistics")
     doc.yaml(data.describe().to_dict())
-```
 
-### Custom Component Styling
-
-Components support custom attributes:
-
-```python
-with doc:
-    # Custom width and alignment
-    doc.image(img, src="wide.png", width="100%", style="border: 1px solid black")
-
-    # Custom table styling
-    doc.table(df, class_name="custom-table")
-```
-
-## Component Backends
-
-Different backends render components differently:
-
-- **Markdown**: Maximum compatibility, works on GitHub
-- **HTML**: Rich formatting, interactive elements
-- **LaTeX**: Academic papers, publication-ready
-
-Switch backends:
-
-```python
-from cmx.backends.html import HTML
-from cmx.backends.latex import LaTeX
-
-# Use HTML backend
-doc = HTML(filename="output.html")
-
-# Use LaTeX backend
-doc = LaTeX(filename="output.tex")
+doc.flush()
 ```
 
 ## Best Practices
 
-1. **Use meaningful filenames**: `figures/training_loss.png` not `fig1.png`
-2. **Add captions**: Help readers understand visualizations
-3. **Normalize images**: Use `normalize=True` for consistent display
-4. **Keep tables readable**: Don't show too many rows/columns
-5. **Organize outputs**: Use subdirectories (`figures/`, `videos/`, etc.)
+1. **Pass bare asset names** (`"loss.png"`) and let `figdir` organize them; use a slashed path only when an asset must live somewhere specific.
+2. **Add captions** to figures to help readers.
+3. **Normalize images** with `normalize=True` for consistent display.
+4. **Keep tables readable** — limit rows/columns; use `show_index=True` only when the index matters.
+5. **Stay on the default `github` table format** unless you need a specific layout — it keeps `tabulate` out of your install.
 
 ## Troubleshooting
 
 ### Images not displaying
 
-- Check that the `src` path is correct
-- Ensure the directory exists (CMX doesn't create directories)
-- For remote logging, verify logger configuration
+- Check that the `src` is what you expect: a bare name lands under `figdir`, a slashed name is used as-is, and links are written relative to the `.md`.
+- You do **not** need to pre-create directories — CMX's default `on_save` creates them automatically when it writes the asset.
 
 ### Tables not formatting correctly
 
-- Ensure data is a pandas DataFrame
-- Check for special characters that might break markdown
-- Use `show_index=False` to hide the index column
+- Tables need `cmx[tables]` (pandas). The default `github` format needs only pandas; alternate `format=` values need `tabulate`.
+- Ensure data is a DataFrame, a CSV string, or loadable via `file=`.
+- Use `show_index=False` (the default) to hide the index.
 
 ### Videos not playing
 
-- GIFs work everywhere, MP4 only in HTML backend
-- Check file size (large videos might not display)
-- Verify codec compatibility for MP4 files
+- GIFs render as images and work everywhere; `.mp4`/`.webm` render as HTML5 `<video>` and show only where HTML is rendered.
+- Check file size and codec compatibility for MP4.
+
+### Routing assets elsewhere (S3, a dashboard, ...)
+
+- There is no logger. Override the `on_save` lifecycle hook (bind on the instance, or subclass `CommonMark`) to write bytes wherever you want and return the link CMX renders. See the basics skill's "Storage & integration hooks" and the Hooks guide.
 
 ## Learn More
 
+- Full documentation: https://cmx-python.readthedocs.io
 - API Reference: https://cmx-python.readthedocs.io/en/latest/api/
-- Examples: Check `examples/` directory in the repository
 - Component source: `src/cmx/backends/components.py`
