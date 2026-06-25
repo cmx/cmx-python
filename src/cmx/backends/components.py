@@ -11,10 +11,39 @@ down explicitly. Anything that needs heavy third-party libraries (numpy, PIL,
 pyyaml) imports them lazily so ``import cmx`` stays cheap.
 """
 
+import os
 from io import StringIO
 
 from .. import utils
 from ..utils import is_subclass, to_snake  # re-exported for backwards compatibility
+
+
+def read_table(file, sep=None, **kwargs):
+    """Load a tabular file into a pandas ``DataFrame``, inferred by extension.
+
+    Supports ``.csv`` / ``.tsv`` (text), ``.json``, ``.parquet``, and Excel
+    (``.xls`` / ``.xlsx``); ``.yaml`` / ``.yml`` are parsed and fed to the
+    ``DataFrame`` constructor. Extra ``kwargs`` are forwarded to the matching
+    pandas reader. ``sep`` overrides the delimiter for text files (defaulting to
+    a tab for ``.tsv`` and a comma otherwise). Unknown extensions are read as CSV.
+    """
+    import pandas as pd
+
+    ext = os.path.splitext(file)[1].lower()
+    if ext == ".json":
+        return pd.read_json(file, **kwargs)
+    if ext == ".parquet":
+        return pd.read_parquet(file, **kwargs)
+    if ext in (".xls", ".xlsx"):
+        return pd.read_excel(file, **kwargs)
+    if ext in (".yaml", ".yml"):
+        import yaml
+
+        with open(file) as f:
+            return pd.DataFrame(yaml.safe_load(f))
+    if sep is None:
+        sep = "\t" if ext == ".tsv" else ","
+    return pd.read_csv(file, sep=sep, **kwargs)
 
 
 def attrs(class_name=None, **kwargs):
@@ -381,12 +410,17 @@ class Table(Component):
 
     data = None
 
-    def __init__(self, table=None, show_index=None, format="github", sep=",*", logger=None, **kwargs):
+    def __init__(self, table=None, file=None, show_index=None, format="github", sep=",*", logger=None, **kwargs):
         super().__init__(logger=logger)
         self.show_index = show_index
         self.kwargs = kwargs  # forwarded to pandas' to_markdown / to_html
         self.format = format
-        if table is None:
+        if file is not None:
+            # Load tabular data straight from disk (csv/tsv/json/parquet/excel/yaml).
+            # ``,*`` is the constructor's regex default for inline strings; let
+            # read_table infer the delimiter unless the caller set a real one.
+            self.data = read_table(file, sep=None if sep == ",*" else sep)
+        elif table is None:
             pass
         else:
             import pandas as pd
