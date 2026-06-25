@@ -17,7 +17,7 @@ doc @ "# Report"
 doc.flush()
 ```
 
-Run `report.py` and you get `report.md` in the same directory. The script's stem becomes the Markdown name (`report.py` → `report.md`), and the **working directory** defaults to the script's folder — not the current working directory. This is what makes a script produce the same output no matter where you run it from.
+Run `report.py` and you get `report.md` in the same directory. The script's base name carries over to the Markdown file (`report.py` → `report.md`), and the **working directory** defaults to the script's folder — not the current working directory. This is what makes a script produce the same output no matter where you run it from.
 
 On configure, CMX prints a green confirmation line so you can click straight through to the result:
 
@@ -44,11 +44,11 @@ The working directory roots both the Markdown file and its assets. Override it w
 doc.config(__file__, wd="/tmp/out")
 ```
 
-The Markdown stem still comes from the script (`report.md`), but the file and its asset folder now live under `/tmp/out`.
+The Markdown name still comes from the script (`report.md`), but the file and its asset folder now live under `/tmp/out`.
 
 ## The figdir template
 
-Assets go into a **figure directory** (`figdir`). `figdir` is a template, and `{fname}` expands to the Markdown stem. The default is `"{fname}"`, so each document gets its own folder named after it.
+Assets go into a **figure directory** (`figdir`). `figdir` is a template, and `{fname}` expands to the Markdown file's name **without its extension** (`report.md` → `report`) — distinct from `doc.filename`, which is the full name *with* extension. The default is `"{fname}"`, so each document gets its own folder named after it.
 
 ```python
 doc.config(__file__)                  # 04_images.py -> assets in 04_images/
@@ -98,8 +98,8 @@ Pass bare names and let `figdir` organize your assets. Reach for a slashed path 
 
 Two read-only properties report the resolved configuration:
 
-- `doc.filename` — the Markdown basename. If you never call `doc.config`, it's derived lazily from the calling script (`foo.py` → `foo.md`, `__init__.py` → `README.md`).
-- `doc.figdir` — the figure directory after `{fname}` expansion.
+- `doc.filename` — the Markdown basename, **with** extension (e.g. `report.md`). If you never call `doc.config`, it's derived lazily from the calling script (`foo.py` → `foo.md`, `__init__.py` → `README.md`).
+- `doc.figdir` — the figure directory after `{fname}` expansion (the name **without** extension, e.g. `report`).
 
 ```python
 doc.config(__file__)   # in report.py
