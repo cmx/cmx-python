@@ -1,10 +1,12 @@
 # API Reference
 
-This section contains the complete API reference for CMX.
+Complete reference for every CMX module, generated from the source with autodoc.
 
-## Core Module
+The API splits into four groups. **Core** is what you import and call day to day. **Backends** turn the document tree into output. **Utilities** support both. **Server** is optional, for serving live documents.
 
-The main module provides the global `doc` object and data utilities.
+## Core
+
+You interact with CMX through the `cmx` module: the global `doc` object, its `md` alias, and the re-exported `cmx.data` helpers.
 
 ```{eval-rst}
 .. automodule:: cmx
@@ -15,11 +17,11 @@ The main module provides the global `doc` object and data utilities.
 
 ## Backends
 
-CMX supports multiple output backends for different use cases.
+A backend renders the accumulated document blocks into a concrete format. Markdown is the primary, fully supported backend; the others cover narrower cases.
 
-### Markdown Backend
+### Markdown
 
-The primary backend for generating markdown documents.
+Renders the document tree to Markdown. This is the default backend.
 
 ```{eval-rst}
 .. automodule:: cmx.backends.markdown
@@ -30,7 +32,7 @@ The primary backend for generating markdown documents.
 
 ### Components
 
-Base components used across all backends.
+The block types (`Text`, `Pre`, `Table`, `Image`, `Figure`, `Row`, `Video`) shared across backends.
 
 ```{eval-rst}
 .. automodule:: cmx.backends.components
@@ -39,7 +41,18 @@ Base components used across all backends.
    :show-inheritance:
 ```
 
-### HTML Backend
+### Table renderer
+
+Pure-Python renderer for the default `github` table format. It needs no `tabulate` and matches `to_markdown(tablefmt="github")` byte for byte.
+
+```{eval-rst}
+.. automodule:: cmx.backends.md_table
+   :members:
+   :undoc-members:
+   :show-inheritance:
+```
+
+### HTML
 
 HTML output support.
 
@@ -50,7 +63,7 @@ HTML output support.
    :show-inheritance:
 ```
 
-### LaTeX Backend
+### LaTeX
 
 LaTeX output support for academic papers and publications.
 
@@ -63,9 +76,9 @@ LaTeX output support for academic papers and publications.
 
 ## Utilities
 
-### Utils Module
+### Utils
 
-Helper functions and utilities.
+Helper functions used across the package.
 
 ```{eval-rst}
 .. automodule:: cmx.utils
@@ -74,9 +87,9 @@ Helper functions and utilities.
    :show-inheritance:
 ```
 
-### Data Module
+### Data
 
-Data processing utilities.
+Data-processing helpers, re-exported as `cmx.data`.
 
 ```{eval-rst}
 .. automodule:: cmx.data
@@ -85,9 +98,9 @@ Data processing utilities.
    :show-inheritance:
 ```
 
-### Context Managers
+### Context managers
 
-Advanced context management utilities.
+The frame-tracing machinery behind `with doc:`, `doc.hide`, and `doc.skip`.
 
 ```{eval-rst}
 .. automodule:: cmx.with_hack
@@ -98,7 +111,7 @@ Advanced context management utilities.
 
 ## Server
 
-Optional server components for live document serving.
+Optional components for serving live documents.
 
 ```{eval-rst}
 .. automodule:: cmx.server
@@ -106,3 +119,7 @@ Optional server components for live document serving.
    :undoc-members:
    :show-inheritance:
 ```
+
+## Next steps
+
+- [Development](../development.md) — set up a dev environment, run tests, and build these docs.

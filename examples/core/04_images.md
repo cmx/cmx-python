@@ -11,11 +11,12 @@ random_image = np.random.rand(100, 100, 3)
 random_image = (random_image * 255).astype(np.uint8)
 
 # Save and display
-doc.image(random_image, src="examples/core/figures/random.png")
+doc.image(random_image, src="random.png")
 ```
-
 ## Random Image
-![examples/core/figures/random.png](examples/core/figures/random.png)```python
+
+![04_images/random.png](04_images/random.png)
+```python
 doc @ "## Gradient Image"
 
 # Create a gradient
@@ -25,11 +26,12 @@ xx, yy = np.meshgrid(x, y)
 gradient = np.stack([xx, yy, np.zeros_like(xx)], axis=-1)
 gradient = (gradient * 255).astype(np.uint8)
 
-doc.image(gradient, src="examples/core/figures/gradient.png")
+doc.image(gradient, src="gradient.png")
 ```
-
 ## Gradient Image
-![examples/core/figures/gradient.png](examples/core/figures/gradient.png)```python
+
+![04_images/gradient.png](04_images/gradient.png)
+```python
 doc @ "## Multiple Images in a Row"
 
 with doc.row():
@@ -37,12 +39,14 @@ with doc.row():
     for i in range(3):
         img = np.random.rand(50, 50, 3)
         img = (img * 255).astype(np.uint8)
-        doc.image(img, src=f"examples/core/figures/mini_{i}.png")
+        doc.image(img, src=f"mini_{i}.png")
 ```
-
 ## Multiple Images in a Row
+
 <div style="flex-wrap:nowrap; display:flex; flex-direction:row; item-align:center;"></div>
 
-![examples/core/figures/mini_0.png](examples/core/figures/mini_0.png)
-![examples/core/figures/mini_1.png](examples/core/figures/mini_1.png)
-![examples/core/figures/mini_2.png](examples/core/figures/mini_2.png)
+![04_images/mini_0.png](04_images/mini_0.png)
+
+![04_images/mini_1.png](04_images/mini_1.png)
+
+![04_images/mini_2.png](04_images/mini_2.png)

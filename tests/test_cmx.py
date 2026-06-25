@@ -1,6 +1,17 @@
-import pytest
+import numpy as np
 
 from cmx import doc
+from cmx.backends.markdown import CommonMark
+
+
+def _gradient_image(h=8, w=8, channels=3):
+    """Deterministic gradient image as a uint8 numpy array (no randomness)."""
+    rows = np.linspace(0, 255, h, dtype=np.uint8)[:, None]
+    cols = np.linspace(0, 255, w, dtype=np.uint8)[None, :]
+    plane = ((rows.astype(np.uint16) + cols.astype(np.uint16)) // 2).astype(np.uint8)
+    if channels == 1:
+        return plane
+    return np.stack([plane] * channels, axis=-1)
 
 
 def test_str():
@@ -61,36 +72,48 @@ def test_table():
     doc.children.clear()
 
 
-def test_image():
-    data = pytest.importorskip("skimage").data
+def test_image(tmp_path):
+    local_doc = CommonMark(filename=str(tmp_path / "test_image.md"))
 
-    img = data.astronaut()
-    doc.image(img)
-    print(doc._md)
-    doc.flush()
-
-
-def test_image_src():
-    data = pytest.importorskip("skimage").data
-
-    img = data.camera()
-    doc.image(img, f"figures/reach.png?ts={doc.now()}")
-    print(doc._md)
-    doc.flush()
+    img = _gradient_image()
+    local_doc.image(img)
+    # An inline image renders as a base64 data URI.
+    assert "data:image/png;base64," in local_doc._md
+    print(local_doc._md)
+    local_doc.flush()
+    assert (tmp_path / "test_image.md").exists()
 
 
-def test_figure_row():
-    doc @ """
+def test_image_src(tmp_path):
+    # root the document at tmp_path so relative image srcs are written there.
+    local_doc = CommonMark(filename=str(tmp_path / "test_image_src.md"), root=str(tmp_path))
+
+    img = _gradient_image(channels=1)
+    src = f"figures/reach.png?ts={local_doc.now()}"
+    local_doc.image(img, src)
+    print(local_doc._md)
+    local_doc.flush()
+    # The image data is written to disk alongside the markdown document.
+    assert (tmp_path / "figures" / "reach.png").exists()
+    assert (tmp_path / "test_image_src.md").exists()
+
+
+def test_figure_row(tmp_path):
+    # root the logger at tmp_path so relative image srcs are written there.
+    local_doc = CommonMark(filename=str(tmp_path / "test_figure_row.md"), root=str(tmp_path))
+
+    local_doc @ """
     ## Test Figure Row
     """
-    with doc:
-        data = pytest.importorskip("skimage").data
+    img = _gradient_image()
 
-        img = data.coins()
-
-    with doc, doc.table() as table:
+    with local_doc.table() as table:
         with table.figure_row() as row:
-            row.figure(img, src=f"figures/reach.png?ts={doc.now()}", title="Before Init", caption="this is the details")
-            row.figure(img, src=f"figures/reach.png?ts={doc.now()}", title="Before Init", caption="this is the details")
-            row.figure(img, src=f"figures/reach.png?ts={doc.now()}", title="Before Init", caption="this is the details")
-            row.figure(img, src=f"figures/reach.png?ts={doc.now()}", title="Before Init", caption="this is the details")
+            row.figure(img, src=f"figures/reach.png?ts={local_doc.now()}", title="Before Init", caption="this is the details")
+            row.figure(img, src=f"figures/reach.png?ts={local_doc.now()}", title="Before Init", caption="this is the details")
+            row.figure(img, src=f"figures/reach.png?ts={local_doc.now()}", title="Before Init", caption="this is the details")
+            row.figure(img, src=f"figures/reach.png?ts={local_doc.now()}", title="Before Init", caption="this is the details")
+
+    local_doc.flush()
+    assert (tmp_path / "figures" / "reach.png").exists()
+    assert (tmp_path / "test_figure_row.md").exists()

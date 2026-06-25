@@ -124,161 +124,80 @@ def to_snake(name):
     return re.sub("([a-z0-9])([A-Z])", r"\1_\2", name).lower()
 
 
-class SimpleLogger:
-    """A simple logger replacement for ml-logger functionality used in cmx.
+# --------------------------------------------------------------------------- #
+# Local-filesystem write helpers.
+#
+# These are the building blocks for ``CommonMark``'s default lifecycle hooks
+# (``on_save`` / ``on_flush``). They are plain module functions so the default
+# hooks can call them and custom hooks can re-use them (``super().on_save(...)``).
+# --------------------------------------------------------------------------- #
 
-    This provides basic file I/O operations for saving images, videos, and text
-    that were previously handled by ml-logger.
-    """
 
-    def __init__(self, root=None, prefix=None):
-        """Initialize the logger with a root directory and optional prefix.
+def _resolve_full_path(path, wd=None):
+    """Join ``path`` under ``wd`` (the document working dir) unless absolute."""
+    import os
 
-        Args:
-            root: Root directory for saving files (defaults to current directory)
-            prefix: Optional prefix to prepend to file paths
-        """
-        import os
+    if wd and not os.path.isabs(path):
+        return os.path.join(wd, path)
+    return path
 
-        self.root = root or os.getcwd()
-        self.prefix = prefix or ""
 
-    def _get_full_path(self, filename):
-        """Get the full path for a file, handling prefix and root."""
-        import os
+def write_image(image, path, *, wd=None, normalize=False):
+    """Write an image array (or PIL image) to ``path`` under ``wd``."""
+    import os
+    from PIL import Image
+    import numpy as np
 
-        if self.prefix:
-            filename = os.path.join(self.prefix, filename)
-        if not os.path.isabs(filename):
-            filename = os.path.join(self.root, filename)
-        return filename
+    full_path = _resolve_full_path(path, wd)
+    os.makedirs(os.path.dirname(full_path), exist_ok=True)
 
-    def save_image(self, image, filename, normalize=False):
-        """Save an image to disk.
+    if isinstance(image, np.ndarray):
+        if normalize:
+            image = ((image - image.min()) / (image.max() - image.min()) * 255).astype(np.uint8)
+        elif image.dtype != np.uint8:
+            image = (image * 255).astype(np.uint8)
+        image = Image.fromarray(image)
 
-        Args:
-            image: Image array (numpy array or PIL Image)
-            filename: Path where to save the image
-            normalize: Whether to normalize the image values
-        """
-        import os
+    image.save(full_path)
+
+
+def write_video(frames, path, *, wd=None):
+    """Write video frames to ``path`` under ``wd`` (``.gif`` only for now)."""
+    import os
+
+    full_path = _resolve_full_path(path, wd)
+    os.makedirs(os.path.dirname(full_path), exist_ok=True)
+
+    if path.endswith(".gif"):
         from PIL import Image
-        import numpy as np
 
-        full_path = self._get_full_path(filename)
-        os.makedirs(os.path.dirname(full_path), exist_ok=True)
+        images = [Image.fromarray(frame) if not isinstance(frame, Image.Image) else frame for frame in frames]
+        images[0].save(full_path, save_all=True, append_images=images[1:], duration=100, loop=0)
+    else:
+        raise NotImplementedError(
+            f"Video format '{os.path.splitext(path)[1]}' not supported. "
+            "Use .gif format or install additional video encoding libraries."
+        )
 
-        if isinstance(image, np.ndarray):
-            if normalize:
-                image = ((image - image.min()) / (image.max() - image.min()) * 255).astype(np.uint8)
-            elif image.dtype != np.uint8:
-                image = (image * 255).astype(np.uint8)
-            image = Image.fromarray(image)
 
-        image.save(full_path)
+def write_savefig(path, *, wd=None, **kwargs):
+    """Save the current matplotlib figure to ``path`` under ``wd``."""
+    import os
+    import matplotlib.pyplot as plt
 
-    def save_video(self, frames, filename):
-        """Save video frames to a file.
+    full_path = _resolve_full_path(path, wd)
+    os.makedirs(os.path.dirname(full_path), exist_ok=True)
 
-        Args:
-            frames: List of image frames (numpy arrays)
-            filename: Path where to save the video
-        """
-        import os
+    plt.savefig(full_path, **kwargs)
 
-        full_path = self._get_full_path(filename)
-        os.makedirs(os.path.dirname(full_path), exist_ok=True)
 
-        if filename.endswith(".gif"):
-            from PIL import Image
+def append_text(text, path, *, wd=None, overwrite=False):
+    """Append (or overwrite) ``text`` to ``path`` under ``wd`` (mkdir -p)."""
+    import os
 
-            images = [Image.fromarray(frame) if not isinstance(frame, Image.Image) else frame for frame in frames]
-            images[0].save(full_path, save_all=True, append_images=images[1:], duration=100, loop=0)
-        else:
-            # For other video formats, you would need additional dependencies like opencv or imageio
-            # For now, raise an error suggesting alternatives
-            raise NotImplementedError(
-                f"Video format '{os.path.splitext(filename)[1]}' not supported. "
-                "Use .gif format or install additional video encoding libraries."
-            )
+    full_path = _resolve_full_path(path, wd)
+    os.makedirs(os.path.dirname(full_path), exist_ok=True)
 
-    def savefig(self, filename, **kwargs):
-        """Save the current matplotlib figure.
-
-        Args:
-            filename: Path where to save the figure
-            kwargs: Additional arguments passed to matplotlib's savefig
-        """
-        import os
-        import matplotlib.pyplot as plt
-
-        full_path = self._get_full_path(filename)
-        os.makedirs(os.path.dirname(full_path), exist_ok=True)
-
-        plt.savefig(full_path, **kwargs)
-
-    def log_text(self, text, filename, overwrite=False):
-        """Log text to a file.
-
-        Args:
-            text: Text content to write
-            filename: Path where to save the text
-            overwrite: If True, overwrite the file; if False, append
-        """
-        import os
-
-        full_path = self._get_full_path(filename)
-        os.makedirs(os.path.dirname(full_path), exist_ok=True)
-
-        mode = "w" if overwrite else "a"
-        with open(full_path, mode) as f:
-            f.write(text)
-
-    def get_dash_url(self):
-        """Get a URL for the dashboard (returns file:// URL for local files)."""
-        return f"file://{self.root}"
-
-    def load_json(self, filename):
-        """Load a JSON file.
-
-        Args:
-            filename: Path to the JSON file
-
-        Returns:
-            Parsed JSON data
-        """
-        import json
-
-        full_path = self._get_full_path(filename)
-        with open(full_path, "r") as f:
-            return json.load(f)
-
-    def load_file(self, filename):
-        """Load a file and return a file-like object.
-
-        Args:
-            filename: Path to the file
-
-        Returns:
-            File-like object (BytesIO)
-        """
-        from io import BytesIO
-
-        full_path = self._get_full_path(filename)
-        with open(full_path, "rb") as f:
-            return BytesIO(f.read())
-
-    @staticmethod
-    def now():
-        """Get the current timestamp as a string.
-
-        Returns:
-            ISO formatted timestamp string
-        """
-        from datetime import datetime
-
-        return datetime.now().isoformat()
-
-    def job_started(self):
-        """Mark a job as started (no-op for simple logger)."""
-        pass
+    mode = "w" if overwrite else "a"
+    with open(full_path, mode) as f:
+        f.write(text)

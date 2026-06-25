@@ -7,7 +7,7 @@ without showing it in the documentation.
 
 from cmx import doc
 
-doc.config(filename="examples/core/06_hiding_code.md")
+doc.config(__file__)
 
 doc @ """
 # Hiding Code Blocks
@@ -60,4 +60,4 @@ with doc:
 
 doc.flush()
 
-print("\n✓ Hiding code example complete! Check examples/core/06_hiding_code.md")
+print("\n✓ Hiding code example complete! Check 06_hiding_code.md next to the script.")

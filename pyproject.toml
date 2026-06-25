@@ -4,13 +4,14 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "cmx"
-version = "0.0.48"
+version = "0.0.49"
 description = "REPL with Python Scripts via live documents - A documentation library for creating interactive markdown documentation from Python code"
 license = { text = "MIT" }
 readme = "README.md"
 requires-python = ">=3.11"
 authors = [
-    { name = "Ge Yang", email = "ge.ike.yang@gmail.com" }
+    { name = "Ge Yang" },
+    { name = "Tom Tao" },
 ]
 keywords = ["documentation", "markdown", "jupyter", "notebooks", "live-documentation", "repl"]
 classifiers = [
@@ -26,10 +27,9 @@ classifiers = [
     "Topic :: Software Development :: Documentation",
 ]
 
-dependencies = [
-    "pandas>=1.0.0",
-    "tabulate>=0.8.0",
-]
+# The core is dependency-free: `import cmx` needs zero third-party packages.
+# Feature surfaces (tables, images, figures, yaml, ...) pull their own extras.
+dependencies = []
 
 [project.urls]
 Homepage = "https://github.com/cmx/cmx-python"
@@ -40,16 +40,24 @@ Issues = "https://github.com/cmx/cmx-python/issues"
 [project.optional-dependencies]
 # Feature extras -- imported lazily, install only what you use.
 # e.g. `pip install cmx[images]` or `pip install cmx[all]`.
+# The default "github" table format is rendered by a pure-Python renderer
+# (cmx.backends.md_table), so only pandas is needed at runtime. tabulate is
+# required only for alternate `format=` values (pipe, grid, ...).
+tables = ["pandas>=1.0.0"]
 images = ["pillow>=8.0.0", "numpy>=1.18.0"]
 figures = ["matplotlib>=3.0.0"]
 yaml = ["pyyaml>=5.0.0"]
-all = ["pillow>=8.0.0", "numpy>=1.18.0", "matplotlib>=3.0.0", "pyyaml>=5.0.0"]
+all = ["pandas>=1.0.0", "pillow>=8.0.0", "numpy>=1.18.0", "matplotlib>=3.0.0", "pyyaml>=5.0.0"]
 
 # Development packages (floors, not exact pins, so they track current releases)
 dev = [
     "black>=24.0",
     "pylint>=3.0",
     "pytest>=7.4",
+    "pandas>=1.0.0",
+    # tabulate is dev-only: the reference oracle for the md_table parity tests
+    # (tests/test_md_table.py). It is NOT a runtime dependency.
+    "tabulate>=0.8.0",
 ]
 
 # Documentation packages (caps widened to admit current Sphinx/myst majors)
@@ -102,11 +110,10 @@ disable = [
 ]
 
 #pytest
-#[tool.pytest.ini_options]
-#addopts = "-n=4 --typeguard-packages=cmx --disable-warnings"
-#testpaths = [
-#    "tests",
-#]
+[tool.pytest.ini_options]
+addopts = "--disable-warnings"
+python_files = ["test_*.py"]
+testpaths = ["tests"]
 
 # pyright
 [tool.pyright]

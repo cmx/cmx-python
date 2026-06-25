@@ -8,7 +8,7 @@ a common pattern for displaying experimental results.
 from cmx import doc
 import pandas as pd
 
-doc.config(filename="examples/core/03_tables.md")
+doc.config(__file__)
 
 doc @ """
 # Working with Tables
@@ -58,4 +58,4 @@ You can also create tables manually in markdown:
 
 doc.flush()
 
-print("\n✓ Tables example complete! Check examples/core/03_tables.md")
+print("\n✓ Tables example complete! Check 03_tables.md next to the script.")

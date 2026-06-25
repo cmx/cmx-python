@@ -7,10 +7,11 @@ This document demonstrates all available syntax variations for adding content to
 ```python
 doc @ "## 1. Prefix @ Operator (Single Line)"
 doc @ "The `@` operator can be used as a prefix for single-line strings:"
-doc.print("Syntax: doc @ \"text\"")
+doc.print('Syntax: doc @ "text"')
 ```
 ## 1. Prefix @ Operator (Single Line)
 The `@` operator can be used as a prefix for single-line strings:
+
 ```
 Syntax: doc @ "text"
 ```
@@ -32,10 +33,11 @@ It can span multiple lines and preserves formatting.
 ```python
 "## 3. Postfix | (Pipe) Operator (Single Line)" | doc
 "The pipe operator can be used postfix-style, similar to Unix pipes:" | doc
-doc.print("Syntax: \"text\" | doc")
+doc.print('Syntax: "text" | doc')
 ```
 ## 3. Postfix | (Pipe) Operator (Single Line)
 The pipe operator can be used postfix-style, similar to Unix pipes:
+
 ```
 Syntax: "text" | doc
 ```
@@ -74,24 +76,26 @@ doc("You can mix and match these syntaxes as needed:")
 doc.print()
 
 # Using traditional call
-doc("Using traditional call: doc(\"text\")")
+doc('Using traditional call: doc("text")')
 
 # Using prefix @
-doc @ "Using prefix @: doc @ \"text\""
+doc @ 'Using prefix @: doc @ "text"'
 
 # Using postfix |
-"Using postfix |: \"text\" | doc" | doc
+'Using postfix |: "text" | doc' | doc
 
 doc.print()
 doc("All three methods are functionally equivalent and produce the same output.")
 ```
 ## 6. Comparison and Mixed Usage
 You can mix and match these syntaxes as needed:
+
 ```
 ```
 Using traditional call: doc("text")
 Using prefix @: doc @ "text"
 Using postfix |: "text" | doc
+
 ```
 ```
 All three methods are functionally equivalent and produce the same output.
@@ -133,6 +137,7 @@ doc.print("Some output before code block")
 ```
 ## 8. Code Block Testing
 This section tests that code blocks have proper spacing:
+
 ```
 Some output before code block
 ```

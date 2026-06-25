@@ -7,7 +7,7 @@ The @ operator is prefix (doc @ "text") while | is postfix ("text" | doc).
 
 from cmx import doc
 
-doc.config(filename="examples/core/02_markdown_operator.md")
+doc.config(__file__)
 
 # Using prefix @ operator for multi-line content
 doc @ """
@@ -45,4 +45,4 @@ with doc:
 
 doc.flush()
 
-print("\n✓ Markdown operator example complete! Check examples/core/02_markdown_operator.md")
+print("\n✓ Markdown operator example complete! Check 02_markdown_operator.md next to the script.")

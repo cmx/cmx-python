@@ -69,3 +69,5 @@ dmypy.json
 
 # Pyright
 .pyright/
+# Claude Code agent worktrees (local scratch)
+.claude/worktrees/

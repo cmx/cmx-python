@@ -9,8 +9,8 @@ This example demonstrates the fundamental features of CMX:
 
 from cmx import doc
 
-# Configure output file
-doc.config(filename="examples/core/01_basic_usage.md")
+# Configure output file (anchored to this script's directory)
+doc.config(__file__)
 
 # Add a title using the @ operator (prefix syntax)
 doc @ "# Basic CMX Usage"
@@ -39,4 +39,4 @@ with doc:
 # Don't forget to flush at the end
 doc.flush()
 
-print("\n✓ Basic usage example complete! Check examples/core/01_basic_usage.md")
+print("\n✓ Basic usage example complete! Check 01_basic_usage.md next to the script.")
