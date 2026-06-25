@@ -20,8 +20,8 @@ def test_config_script_path_derives_md_wd_and_figdir(tmp_path):
     doc.config(file=script)
 
     assert doc.filename == "04_images.md"
-    assert doc.logger.root == str(tmp_path)
-    assert os.path.join(doc.logger.root, doc.filename) == str(tmp_path / "04_images.md")
+    assert doc.wd == str(tmp_path)
+    assert os.path.join(doc.wd, doc.filename) == str(tmp_path / "04_images.md")
     # default figdir template is "{fname}" -> the md stem
     assert doc.figdir == "04_images"
 
@@ -89,7 +89,7 @@ def test_explicit_wd_override(tmp_path):
     doc = CommonMark()
     doc.config(file=script, wd=str(override))
 
-    assert doc.logger.root == str(override)
+    assert doc.wd == str(override)
     img = doc.image(_arr(), src="a.png")
     assert img.src == "04_images/a.png"
     assert os.path.exists(override / "04_images" / "a.png")

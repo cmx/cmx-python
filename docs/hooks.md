@@ -1,192 +1,183 @@
-# Hooks
+# Lifecycle hooks
 
-Send a document's text and assets to an external service — like dash.ml's README endpoint — by giving CMX your own logger.
+Send a document's text and assets anywhere — local disk, S3/GCS, dash.ml — without a storage framework.
 
-CMX never writes to disk directly. Every write goes through a **logger** object, and you can swap in your own. The logger is the integration seam: implement its methods and CMX will call them as it renders, so the same script that produces a local `.md` can instead stream text and images to a remote service.
+Each lifecycle moment is a **hook**: a method on the document with a sensible default that writes to the local filesystem. You change behavior two ways — **bind** a function on the instance for a one-off, or **subclass** `CommonMark` and override for something reusable. No logger, no backend registry.
 
-## Set a logger
+## The key effects
 
-Pass any object that implements the [logger protocol](logger-protocol) when you configure the document:
+Five hooks carry the document's life. A storage integration usually touches two or three.
+
+| Hook | Fires | Returns |
+|---|---|---|
+| `on_mount` | once, when `doc.config()` resolves output — the destination/name **handshake** | `dest` (base key / URL / id) |
+| `on_save` | per binary asset (image / video / figure) | the **link** written into `![]( )` |
+| `on_flush` | per `doc.flush()` — a rendered chunk | — |
+| `on_close` | once, on `doc.close()` / `atexit` | — |
+| `on_error` | per failed `with doc:` block | — |
+
+`on_mount` and `on_save` are the heart of storage — *where bytes go* and *what name comes back*. `on_flush`/`on_close` are the text: stream chunks, or write the whole thing once at the end. All hooks take **keyword-only** arguments and accept `**kw`, so adding a field later never breaks an existing hook. Only `on_mount` and `on_save` use their **return value**.
+
+(two-patterns)=
+## Two ways to set hooks
+
+### Pattern 1 — One-off binding
+
+Bind a function (or lambda) on the document instance. Best for a single script or a quick remote target.
 
 ```python
 from cmx import doc
-from myproject.dash import DashLogger
 
-doc.config(__file__, logger=DashLogger(project="experiments", run="run-042"))
+doc.config(__file__)
+
+doc.on_mount = lambda *, filename, **kw: dash.create_readme(filename)   # handshake
+doc.on_save  = lambda *, data, path, **kw: dash.put_file(path, encode(data))  # -> URL
+doc.on_close = lambda *, full_text, dest, **kw: dash.put_readme(dest, full_text)
 ```
 
-The default logger (`cmx.utils.SimpleLogger`) writes to the local filesystem, rooted at the document's working directory. A custom logger can write anywhere — an HTTP endpoint, an object store, a database. When the logger's `root` is an `http(s)` URL, CMX prints the dashboard URL from `get_dash_url()` instead of a `file://` path.
+A bound function has **no `self`** — it shadows the default method on that one instance. To keep the default behavior and add to it, capture and wrap it:
 
-## When CMX calls each hook
+```python
+_save = doc.on_save                                  # built-in local writer
+doc.on_save = lambda **kw: upload(**kw) or _save(**kw)   # upload AND keep local
+```
 
-These are the methods CMX calls today. A logger only needs to implement the ones used by the features you use — a text-only document never triggers `save_image`.
+### Pattern 2 — Class inheritance
 
-| Hook | Signature | CMX calls it when |
+Subclass `CommonMark` and override the hook methods. Best for a reusable integration you import across projects, test in isolation, or ship as a package.
+
+```python
+from cmx.backends.markdown import CommonMark
+
+
+class S3Doc(CommonMark):
+    bucket = "runs"
+
+    def on_mount(self, *, filename, wd, figdir, doc, **kw):
+        return f"s3://{self.bucket}/{filename}"
+
+    def on_save(self, *, data, path, kind, dest, doc, **kw):
+        s3_put(f"{self.bucket}/{path}", encode(data))
+        return f"https://{self.bucket}.s3.amazonaws.com/{path}"
+
+    def on_close(self, *, full_text, path, dest, doc, **kw):
+        super().on_close(full_text=full_text, path=path, dest=dest, doc=doc, **kw)
+        s3_put(dest, full_text.encode())
+
+
+doc = S3Doc()
+doc.config(__file__)
+```
+
+Overridden methods have `self`; call `super().on_<event>(...)` to keep the default behavior alongside yours.
+
+### Which to use
+
+| | One-off binding | Class inheritance |
 |---|---|---|
-| `log_text` | `log_text(text, filename, overwrite=False)` | On `doc.config` (to clear, `overwrite=True`) and on every `doc.flush()` (to append rendered content). |
-| `save_image` | `save_image(image, filename, normalize=False)` | `doc.image(array, src=...)` with array data. |
-| `save_video` | `save_video(frames, filename)` | `doc.video(frames, src=...)`. |
-| `savefig` | `savefig(filename, **kwargs)` | `doc.savefig(key)` — saves the current matplotlib figure. |
-| `get_dash_url` | `get_dash_url() -> str` | On `doc.config`, when `root` starts with `http`, to print where output landed. |
-| `now` | `now() -> str` | Available for timestamps (e.g. report headers). |
-| `job_started` | `job_started()` | Reserved lifecycle marker (no-op by default). |
-| `load_json` / `load_file` | `load_json(filename)` / `load_file(filename)` | Reading prior data back in. |
+| Shape | `doc.on_save = fn` | `class X(CommonMark): def on_save(self, …)` |
+| Best for | one script, quick remote target | reusable, packaged, testable integrations |
+| Keep the default | capture-and-wrap | `super().on_<event>(…)` |
+| State | closure variables | `self` |
 
-CMX also reads and sets `logger.root` to resolve the working directory, and joins relative paths under it.
+Both drive the same hooks; pick by how reusable the integration needs to be.
 
-## The four core hooks
+(optional-hooks)=
+## Optional hooks
 
-These map directly to what you asked for when integrating with dash.ml.
+The same model covers content and capture — set them only if you need them.
 
-### 1. Saving images and other data
+**Content** — observe or export blocks as they're added:
 
-`save_image`, `save_video`, and `savefig` receive the in-memory data (a numpy array, a list of frames, or the live matplotlib figure) and the resolved relative `filename`. Your logger decides where the bytes go — write a file, `POST` to an upload endpoint, or push to an object store — and the markdown link CMX emits (`![](filename)`) should resolve to wherever you put it. See [Asset links](asset-links) for rewriting those links to absolute URLs.
-
-### 2. Flushing intermediate text
-
-Each `doc.flush()` renders the document's accumulated blocks and calls `log_text(text, filename, overwrite=False)`, then clears those blocks. A long-running script can flush repeatedly to stream progress. Your logger decides whether each flush **appends** to the destination (the default, good for a growing log) or **replaces** it with the full content so far (good for a README that should always show the complete document).
-
-### 3. Saving the final text
-
-There is no separate "final" call today — the last `doc.flush()` carries the tail of the document. For services that want the complete document in one shot at the end, buffer in `log_text` and send on `close()` (see [Proposed hooks](proposed-hooks)), or call `doc.flush()` once at the end of the script.
-
-### 4. The destination handshake
-
-Deciding *where* output goes and *what it's named* happens at `doc.config` time:
-
-- CMX sets `logger.root` to the resolved working directory and passes a relative `filename` (the document's basename) to every hook.
-- If `logger.root` is an `http(s)` URL, CMX treats output as remote and prints `get_dash_url()`.
-
-This is enough for a fixed destination. For services that **assign** an id or canonical path (dash.ml minting a README slug from the project and run), do the handshake in your logger's constructor or lazily on the first write, then return the resolved location from `get_dash_url()`. The [proposed `resolve(stem)` hook](proposed-hooks) makes this an explicit step.
-
-## Example: a dash.ml logger
-
-A logger that streams a CMX document to a dash.ml README endpoint. The handshake resolves the README's URL from the project/run; flushes are sent as replacements so the README always shows the whole document; images are uploaded as files.
+| Hook | Fires | Note |
+|---|---|---|
+| `on_block` | every block, with `kind ∈ {text, code, table, image, figure, video}` | one hook for all blocks; dispatch on `kind` (e.g. export a CSV when `kind == "table"`). New component types never add a hook. |
 
 ```python
-import os
-import requests  # or the ml-dash client
-
-
-class DashLogger:
-    """Stream a CMX document to a dash.ml README endpoint."""
-
-    def __init__(self, project, run, base_url="https://dash.ml/api"):
-        self.project = project
-        self.run = run
-        # `root` being an http URL puts CMX in "remote" mode.
-        self.root = f"{base_url}/{project}/{run}"
-        self.prefix = ""
-        self._buffer = ""          # full document, for replace-on-flush
-
-    # --- destination handshake -------------------------------------------
-    def get_dash_url(self):
-        return f"https://dash.ml/{self.project}/{self.run}/README"
-
-    # --- text (intermediate + final) -------------------------------------
-    def log_text(self, text, filename, overwrite=False):
-        # Replace semantics: keep the remote README in sync with the doc.
-        self._buffer = text if overwrite else self._buffer + text
-        requests.put(f"{self.root}/readme", json={"path": filename,
-                                                   "content": self._buffer})
-
-    # --- assets ----------------------------------------------------------
-    def save_image(self, image, filename, normalize=False):
-        from io import BytesIO
-        from PIL import Image
-        import numpy as np
-
-        if isinstance(image, np.ndarray):
-            if image.dtype != np.uint8:
-                image = (image * 255).astype(np.uint8)
-            image = Image.fromarray(image)
-        buf = BytesIO()
-        image.save(buf, "png")
-        requests.post(f"{self.root}/files/{filename}", data=buf.getvalue())
-
-    def savefig(self, filename, **kwargs):
-        import matplotlib.pyplot as plt
-        from io import BytesIO
-
-        buf = BytesIO()
-        plt.savefig(buf, format="png", **kwargs)
-        requests.post(f"{self.root}/files/{filename}", data=buf.getvalue())
-
-    # --- niceties --------------------------------------------------------
-    @staticmethod
-    def now():
-        from datetime import datetime
-        return datetime.now().isoformat()
-
-    def job_started(self):
-        requests.post(f"{self.root}/status", json={"state": "running"})
+doc.on_block = lambda *, kind, node, **kw: export_csv(node) if kind == "table" else None
 ```
 
-Use it like any logger:
+**Capture** — observe `with doc:` control:
+
+| Hook | Fires | Note |
+|---|---|---|
+| `on_hide` | a `with doc.hide:` block runs (not shown) | side-effect only |
+| `on_skip` | a `with doc.skip:` block is skipped | side-effect only |
+
+`on_hide` and `on_skip` fire when the `doc.hide` / `doc.skip` property is read — at the top of the `with` block. An inline-span hook (`on_inline`) is not yet available.
+
+(hook-context)=
+## Hook context — a concrete trace
+
+For this script at `/proj/report.py`:
 
 ```python
-doc.config(__file__, logger=DashLogger(project="experiments", run="run-042"))
+from cmx import doc
 
-doc @ "# Training run 042"
+doc.config(__file__)
+
 with doc:
-    doc.image(make_loss_plot(), src="loss.png")   # uploaded to dash.ml
-doc.flush()                                         # README updated on dash.ml
+    doc @ "# Run 042"
+    doc.table(df)                 # df = pd.DataFrame({"a": [1], "b": [2]})
+    doc.image(arr, "loss.png")    # arr = uint8 ndarray, shape (480, 640, 3)
+
+doc.flush()
 ```
 
-:::{note}
-The endpoint paths above are illustrative. Wire `log_text`/`save_image` to the real dash.ml (ml-dash) client for your deployment.
-:::
+CMX resolves `.py → report.md`, `wd=/proj`, `figdir="report"` (the `{fname}` default), then calls each hook with exactly these keyword payloads:
 
-(asset-links)=
-## Asset links
+```text
+on_mount(filename="report.md", wd="/proj", figdir="report", doc=<doc>)
+        -> return a dest (e.g. "s3://runs/report.md") or None for local
 
-CMX writes image links relative to the document (`![](loss.png)`). When assets live on a remote service, the rendered README needs absolute URLs. Two options: serve assets under the README's own path so relative links resolve as-is, or rewrite links to absolute URLs before sending — the natural place is the proposed [`before_write`](proposed-hooks) hook.
+on_block(kind="table", node=<Table>, doc=<doc>)        # if set
 
-(proposed-hooks)=
-## Proposed hooks
+on_save(kind="image",
+        path="report/loss.png",          # bare "loss.png" placed under figdir
+        data=<ndarray (480,640,3) uint8>,
+        dest=<whatever on_mount returned>,
+        doc=<doc>)
+        -> return the link, e.g. "report/loss.png" (local) or an https URL
 
-CMX does not call these yet. They are the extension points worth adding for richer dash.ml integration — listed so a logger can be designed forward-compatibly.
+on_flush(text=<rendered chunk below>, path="report.md", dest=<...>, doc=<doc>)
 
-| Hook | Signature | Purpose |
-|---|---|---|
-| `resolve` | `resolve(stem) -> str` | Explicit destination handshake: mint/return the canonical path, id, or URL for this document. |
-| `close` | `close()` | End-of-run finalize: flush buffers, mark the run complete, send the full document once. |
-| `before_write` | `before_write(text) -> text` | Transform rendered markdown before it leaves (rewrite asset links to absolute URLs, inject frontmatter). |
-| `asset_url` | `asset_url(filename) -> str` | Return the public URL for a saved asset, so links point at hosted files. |
-| `set_meta` | `set_meta(**fields)` | Attach title, tags, author, timestamps to the remote document. |
-| `on_progress` | `on_progress(stage, fraction)` | Heartbeat/progress for long runs surfaced on the dashboard. |
-| `save_data` | `save_data(obj, filename)` | Generic blob/artifact save beyond images and video (arrays, JSON, checkpoints). |
-| `on_error` | `on_error(exc)` | Mark the run failed and capture the traceback in the document. |
+on_close(full_text=<complete report.md>, path="report.md", dest=<...>, doc=<doc>)
+```
 
-If you want any of these wired into the core render loop, open an issue describing the dash.ml flow it unblocks.
+The `text` passed to `on_flush` (and the `full_text` at `on_close`). The leading code block is the source captured by `with doc:`:
 
-(logger-protocol)=
-## Logger protocol
-
-The minimum a custom logger must provide for the features you use:
-
+````markdown
 ```python
-class Logger:
-    root: str                                  # base path or URL; CMX reads/sets this
-    prefix: str                                # optional path prefix
-
-    def log_text(self, text, filename, overwrite=False): ...   # required for any output
-    def get_dash_url(self) -> str: ...                          # required if root is http
-
-    def save_image(self, image, filename, normalize=False): ...  # for doc.image(array)
-    def save_video(self, frames, filename): ...                  # for doc.video
-    def savefig(self, filename, **kwargs): ...                   # for doc.savefig
-    def load_json(self, filename): ...                           # optional read-back
-    def load_file(self, filename): ...                           # optional read-back
-    @staticmethod
-    def now() -> str: ...                                        # optional timestamp
-    def job_started(self): ...                                   # optional lifecycle
+doc @ "# Run 042"
+doc.table(df)
+doc.image(arr, "loss.png")
 ```
 
-`cmx.utils.SimpleLogger` is the reference implementation — read it for the exact filesystem behavior.
+# Run 042
+
+|   a |   b |
+|-----|-----|
+|   1 |   2 |
+
+![report/loss.png](report/loss.png)
+````
+
+`on_save`'s returned link is what lands in `![ ](report/loss.png)` — the round-trip a remote store uses to swap relative paths for hosted URLs. `on_close` gets `full_text`, so a PUT-only target (S3, a "set README" endpoint) can write the whole document once instead of appending per flush.
+
+(how-it-works)=
+## How it works
+
+Hooks are methods on `CommonMark`, each with a local-disk default body. CMX dispatches each lifecycle moment with `self.on_<event>(**ctx)`:
+
+- `on_mount` fires inside `config()`, after the filename, working directory, and figdir resolve. Its return becomes `doc.dest` (a remote base key / URL, or `None` for local).
+- `on_save` fires from the `image` / `video` / `figure` / `savefig` factories. CMX renders its returned link into the `![]( )`; the default writes the bytes under `doc.wd` and returns the relative path.
+- `on_flush` fires from `flush()` (and the end of `with doc:`); the default appends the rendered chunk to the `.md`.
+- `on_close` fires from `doc.close()` and a registered `atexit` guard — exactly once across both. `full_text` is the file's full content (local), falling back to the accumulated document buffer.
+- `on_error` fires in the `with doc:` exception path; it does not suppress the exception, which still propagates.
+
+Override a hook by subclassing (the method has `self`) or by binding a plain function on the instance (it shadows the default — no `self`). Both work in plain Python; there is no registry. Subclass methods survive `doc.new()` automatically.
 
 ## Next steps
 
-- [Configuration](configuration.md) — how `root`, `wd`, and filenames are resolved before hooks run.
-- [Images](images.md) — what `save_image` / `savefig` receive and how asset links are formed.
-- [API reference](api/index.md) — the `SimpleLogger` reference implementation.
+- [Configuration](configuration.md) — how `dest`, `wd`, and filenames are resolved before `on_mount` fires.
+- [Images](images.md) — what `on_save` receives and the link it returns.

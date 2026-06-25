@@ -6,9 +6,11 @@ which (``Table``, ``FigureRow``, ``Row``) hold children of their own.
 
 This module is dependency-inverted the simple way: there is no class registry or
 ``__getattribute__`` proxy. Parents create their children by calling the
-component classes directly, and the optional file-writing ``logger`` is threaded
-down explicitly. Anything that needs heavy third-party libraries (numpy, PIL,
-pyyaml) imports them lazily so ``import cmx`` stays cheap.
+component classes directly. Components are pure *render* objects -- they no
+longer write files; the document's lifecycle hooks (``on_save`` and friends, see
+:class:`cmx.backends.markdown.CommonMark`) own all I/O and hand each component
+the final ``src`` link to render. Anything that needs heavy third-party
+libraries (numpy, PIL, pyyaml) imports them lazily so ``import cmx`` stays cheap.
 """
 
 import os
@@ -46,12 +48,11 @@ class Component:
     data = None
     class_name = None
 
-    def __init__(self, tag=None, children=None, logger=None, **kwargs):
+    def __init__(self, tag=None, children=None, **kwargs):
         self.tag = tag or self.tag
         self.kwargs = kwargs
         self.style = {}
         self.children = [] if children is None else children
-        self.logger = logger
 
     def now(self, fmt=None):
         from datetime import datetime
@@ -205,20 +206,19 @@ class Img(Component):
 
 
 class Image(Img):
-    """An image that can reference a file, save data to a file, or inline base64.
+    """An image that either references a ``src`` link or inlines base64 data.
 
-    - ``src`` only            -> reference the file path.
-    - ``src`` + ``image`` + a ``logger`` -> write the file, then reference it.
-    - ``image`` only          -> inline the data as a base64 ``data:`` URI.
+    Components no longer perform any file I/O -- the document's ``on_save`` hook
+    writes the bytes and returns the link, which is passed here as ``src``.
+
+    - ``src`` given      -> reference that link (already resolved by ``on_save``).
+    - ``image`` only     -> inline the array as a base64 ``data:`` URI.
     """
 
     data = None
 
-    def __init__(self, image=None, src=None, logger=None, normalize=False, **kwargs):
+    def __init__(self, image=None, src=None, normalize=False, **kwargs):
         if src is not None:
-            file_path, *_ = src.split("?")
-            if image is not None and logger is not None:
-                logger.save_image(image, file_path, normalize=normalize)
             super().__init__(src=src, **kwargs)
         elif image is not None:
             import numpy as np
@@ -261,14 +261,13 @@ class Video(Component):
         )
 
 
-def video(frames=None, *, src, logger=None, **kwargs):
-    """Save video frames (if given) and return the matching component.
+def video(frames=None, *, src, **kwargs):
+    """Return the component matching ``src``.
 
     ``.gif`` sources render as an ``Image``; everything else as a ``Video``.
+    Frame data is saved by the document's ``on_save`` hook, not here.
     """
     file_path, *_ = src.split("?")
-    if frames is not None and logger is not None:
-        logger.save_video(frames, file_path)
     if file_path.endswith("gif"):
         return Image(src=src, **kwargs)
     return Video(src=src, **kwargs)
@@ -277,13 +276,13 @@ def video(frames=None, *, src, logger=None, **kwargs):
 class Figure(Component):
     tag = "div"
 
-    def __init__(self, image=None, src=None, title=None, caption=None, logger=None, **kwargs):
-        super().__init__(logger=logger)
+    def __init__(self, image=None, src=None, title=None, caption=None, **kwargs):
+        super().__init__()
         self.src = src
         if isinstance(image, Component):
             self.img = image
         else:
-            self.img = Image(image=image, src=src, logger=logger, **kwargs)
+            self.img = Image(image=image, src=src, **kwargs)
         self.title = title
         self.caption = caption
         self.children = [self.title, self.img, self.caption]
@@ -303,11 +302,8 @@ class Figure(Component):
 
 
 class Savefig(Figure):
-    def __init__(self, key, caption=None, width=None, height=None, zoom=None, logger=None, **kwargs):
-        file_path, *_ = key.split("?")
-        super().__init__(src=key, width=width, height=height, caption=caption, zoom=zoom, logger=logger, **kwargs)
-        if logger is not None:
-            logger.savefig(file_path, **kwargs)
+    def __init__(self, key, caption=None, width=None, height=None, zoom=None, **kwargs):
+        super().__init__(src=key, width=width, height=height, caption=caption, zoom=zoom, **kwargs)
 
 
 class Row(Component):
@@ -317,8 +313,8 @@ class Row(Component):
         item_align="center",
     )
 
-    def __init__(self, wrap=False, styles=None, logger=None, **kwargs):
-        super().__init__(logger=logger, **kwargs)
+    def __init__(self, wrap=False, styles=None, **kwargs):
+        super().__init__(**kwargs)
         if wrap is not None:
             wrap = "wrap" if wrap else "nowrap"
         self.styles = dict(flex_wrap=wrap, **Row.styles)
@@ -335,22 +331,42 @@ class FigureRow(Container):
     three Markdown rows: titles, images, and captions (empty bands are dropped).
     """
 
-    def __init__(self, header=None, n_cols=None, logger=None, **kwargs):
-        super().__init__(logger=logger, **kwargs)
+    def __init__(self, header=None, n_cols=None, doc=None, **kwargs):
+        super().__init__(**kwargs)
+        # ``doc`` is the owning document, threaded so that nested assets are
+        # written through the document's ``on_save`` lifecycle hook.
+        self._doc = doc
         self.n_cols = n_cols
         self.titles = []
         self.images = []
         self.footers = []
 
+    def _save(self, *, data, path, kind, **extra):
+        """Route a nested asset through the owning document's ``on_save`` hook.
+
+        Falls back to the bare ``path`` (no I/O) when there is no document.
+        """
+        on_save = getattr(self._doc, "on_save", None)
+        if on_save is None:
+            return path
+        # Note: nested figure-row assets use the path as-is (no ``_resolve_asset``
+        # figdir placement) -- matching the historical behavior.
+        return on_save(data=data, path=path, kind=kind, dest=getattr(self._doc, "dest", None), doc=self._doc, **extra)
+
     def figure(self, image=None, src=None, title=None, caption=None, **kwargs):
         self.titles.append(None if title is None else Bold(title))
         self.footers.append(None if caption is None else Span(caption))
-        self.children.append(Image(image=image, src=src, logger=self.logger, **kwargs))
+        if src is not None:
+            src = self._save(data=image, path=src, kind="image", **kwargs)
+            self.children.append(Image(src=src))
+        else:
+            self.children.append(Image(image=image, **kwargs))
 
     def video(self, frames=None, src=None, title=None, caption=None, **kwargs):
         self.titles.append(None if title is None else Bold(title))
         self.footers.append(None if caption is None else Span(caption))
-        self.children.append(video(frames=frames, src=src, logger=self.logger, **kwargs))
+        src = self._save(data=frames, path=src, kind="video", **kwargs)
+        self.children.append(video(src=src, **kwargs))
 
     def column(self, title=None, text=None, footer=None):
         self.titles.append(None if title is None else Bold(title))
@@ -360,7 +376,8 @@ class FigureRow(Container):
     def savefig(self, key, title=None, caption=None, **kwargs):
         self.titles.append(None if title is None else Bold(title))
         self.footers.append(None if caption is None else Span(caption))
-        self.children.append(Savefig(key, logger=self.logger, **kwargs))
+        src = self._save(data=None, path=key, kind="figure", **kwargs)
+        self.children.append(Savefig(src, caption=caption))
 
     @property
     def rows(self):
@@ -382,8 +399,11 @@ class Table(Component):
 
     data: "pd.DataFrame | None" = None
 
-    def __init__(self, table=None, show_index=None, format="github", sep=",*", logger=None, **kwargs):
-        super().__init__(logger=logger)
+    def __init__(self, table=None, show_index=None, format="github", sep=",*", doc=None, **kwargs):
+        super().__init__()
+        # ``doc`` is threaded so figure rows can save nested assets via the
+        # document's ``on_save`` hook.
+        self._doc = doc
         self.show_index = show_index
         self.kwargs = kwargs  # forwarded to pandas' to_markdown / to_html
         self.format = format
@@ -405,7 +425,7 @@ class Table(Component):
                 self.data = pd.DataFrame(table)
 
     def figure_row(self, **kwargs):
-        row = FigureRow(logger=self.logger, **kwargs)
+        row = FigureRow(doc=self._doc, **kwargs)
         self.children.append(row)
         return row
 
@@ -451,9 +471,10 @@ class Table(Component):
 class _Factory:
     """Mixin of component-creating helpers shared by document containers.
 
-    Each helper instantiates a component (threading this container's ``logger``),
-    appends it as a child, and returns it -- so the result can be used directly
-    or as a ``with`` block.
+    Each helper resolves the asset path, routes the bytes through the document's
+    ``on_save`` lifecycle hook (which returns the *link* to render), instantiates
+    the matching pure-render component, appends it, fires ``on_block``, and
+    returns it -- so the result can be used directly or as a ``with`` block.
     """
 
     def _resolve_asset(self, name):
@@ -472,37 +493,69 @@ class _Factory:
         figdir = getattr(self, "figdir", "") or ""
         return posixpath.join(figdir, name) if figdir else name
 
+    def _emit_save(self, *, data, path, kind, **extra):
+        """Hand an asset to ``on_save`` (if present) and return the link.
+
+        Falls back to the resolved ``path`` when no hook exists (a bare
+        :class:`Article` with no lifecycle machinery).
+        """
+        on_save = getattr(self, "on_save", None)
+        if on_save is None:
+            return path
+        return on_save(data=data, path=path, kind=kind, dest=getattr(self, "dest", None), doc=self, **extra)
+
+    def _emit_block(self, *, kind, node):
+        on_block = getattr(self, "on_block", None)
+        if on_block is not None:
+            on_block(kind=kind, node=node, doc=self)
+
     def table(self, table=None, **kwargs):
-        t = Table(table, logger=self.logger, **kwargs)
+        t = Table(table, doc=self, **kwargs)
         self.children.append(t)
+        self._emit_block(kind="table", node=t)
         return t
 
     def image(self, image=None, src=None, **kwargs):
         src = self._resolve_asset(src)
-        img = Image(image=image, src=src, logger=self.logger, **kwargs)
+        if src is not None:
+            link = self._emit_save(data=image, path=src, kind="image", **kwargs)
+            img = Image(src=link)
+        else:
+            # Inline base64 path: no src, no on_save -- render the data directly.
+            img = Image(image=image, **kwargs)
         self.children.append(img)
+        self._emit_block(kind="image", node=img)
         return img
 
     def figure(self, image=None, src=None, title=None, caption=None, **kwargs):
         src = self._resolve_asset(src)
-        fig = Figure(image=image, src=src, title=title, caption=caption, logger=self.logger, **kwargs)
+        if src is not None:
+            link = self._emit_save(data=image, path=src, kind="image", **kwargs)
+            fig = Figure(src=link, title=title, caption=caption)
+        else:
+            fig = Figure(image=image, title=title, caption=caption, **kwargs)
         self.children.append(fig)
+        self._emit_block(kind="figure", node=fig)
         return fig
 
     def video(self, frames=None, src=None, **kwargs):
         src = self._resolve_asset(src)
-        v = video(frames=frames, src=src, logger=self.logger, **kwargs)
+        link = self._emit_save(data=frames, path=src, kind="video", **kwargs)
+        v = video(src=link, **kwargs)
         self.children.append(v)
+        self._emit_block(kind="video", node=v)
         return v
 
-    def savefig(self, key, **kwargs):
+    def savefig(self, key, caption=None, width=None, height=None, zoom=None, **kwargs):
         key = self._resolve_asset(key)
-        fig = Savefig(key, logger=self.logger, **kwargs)
+        link = self._emit_save(data=None, path=key, kind="figure", **kwargs)
+        fig = Savefig(link, caption=caption, width=width, height=height, zoom=zoom)
         self.children.append(fig)
+        self._emit_block(kind="figure", node=fig)
         return fig
 
     def row(self, *args, **kwargs):
-        r = Row(*args, logger=self.logger, **kwargs)
+        r = Row(*args, **kwargs)
         self.children.append(r)
         return r
 
