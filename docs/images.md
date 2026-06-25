@@ -68,5 +68,6 @@ with doc:
 
 ## Next Steps
 
+- [Matplotlib Figures](figures.md) - Save plots with `doc.savefig` (dpi, figure tables)
 - [Tables](tables.md) - Display data tables
 - [YAML](yaml.md) - Display configuration

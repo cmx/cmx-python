@@ -19,7 +19,9 @@ from ..utils import is_subclass, to_snake  # re-exported for backwards compatibi
 
 def attrs(class_name=None, **kwargs):
     attrs_str = f'class="{class_name}"' if class_name else ""
-    attrs_str += " ".join([k.replace("_", "-") + f'="{str(v)}"' for k, v in kwargs.items()])
+    # Drop ``None`` values so optional attrs (e.g. an unset width/height) don't
+    # render as the literal string ``width="None"``.
+    attrs_str += " ".join([k.replace("_", "-") + f'="{str(v)}"' for k, v in kwargs.items() if v is not None])
     return attrs_str
 
 
@@ -289,9 +291,20 @@ class Figure(Component):
 
 
 class Savefig(Figure):
+    """Save the current matplotlib figure to ``key`` and reference it inline.
+
+    ``key`` is the destination path (an optional ``?...`` query suffix is
+    stripped before writing, so it can double as a cache-buster in the ``src``).
+    ``title``/``caption``/``width``/``height``/``zoom`` control how the figure is
+    displayed; every other keyword (``dpi``, ``bbox_inches``, ``transparent``,
+    ``facecolor``, ``format`` ...) is forwarded untouched to matplotlib's
+    ``savefig`` and is *not* leaked into the ``<img>`` tag.
+    """
+
     def __init__(self, key, caption=None, width=None, height=None, zoom=None, logger=None, **kwargs):
         file_path, *_ = key.split("?")
-        super().__init__(src=key, width=width, height=height, caption=caption, zoom=zoom, logger=logger, **kwargs)
+        # Display attrs only -- matplotlib savefig kwargs stay out of the markup.
+        super().__init__(src=key, width=width, height=height, caption=caption, zoom=zoom, logger=logger)
         if logger is not None:
             logger.savefig(file_path, **kwargs)
 

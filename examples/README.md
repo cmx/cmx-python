@@ -65,6 +65,10 @@ The `core/` directory contains 8 comprehensive examples demonstrating real-world
    - Multiple images in rows
    - Automatic file management
 
+   See also **[10_matplotlib_figures.py](core/10_matplotlib_figures.py)** - Matplotlib figures
+   - Saving plots with `doc.savefig` (dpi, bbox_inches, transparent)
+   - Building figure tables with `table.figure_row()`
+
 5. **[05_yaml_output.py](core/05_yaml_output.py)** - Configuration documentation
    - YAML output
    - Nested configurations

@@ -1,3 +1,5 @@
+import pytest
+
 from cmx import doc
 
 
@@ -60,7 +62,7 @@ def test_table():
 
 
 def test_image():
-    from skimage import data
+    data = pytest.importorskip("skimage").data
 
     img = data.astronaut()
     doc.image(img)
@@ -69,7 +71,7 @@ def test_image():
 
 
 def test_image_src():
-    from skimage import data
+    data = pytest.importorskip("skimage").data
 
     img = data.camera()
     doc.image(img, f"figures/reach.png?ts={doc.now()}")
@@ -82,7 +84,7 @@ def test_figure_row():
     ## Test Figure Row
     """
     with doc:
-        from skimage import data
+        data = pytest.importorskip("skimage").data
 
         img = data.coins()
 
