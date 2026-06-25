@@ -11,7 +11,14 @@ down explicitly. Anything that needs heavy third-party libraries (numpy, PIL,
 pyyaml) imports them lazily so ``import cmx`` stays cheap.
 """
 
+import os
+import posixpath
+import re
 from io import StringIO
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    import pandas as pd
 
 from .. import utils
 from ..utils import is_subclass, to_snake  # re-exported for backwards compatibility
@@ -92,19 +99,22 @@ class Div(Component):
 class Span(Component):
     tag = "span"
 
-    def __init__(self, *args, sep=" ", dedent=None, **kwargs):
+    def __init__(self, *args, sep=" ", dedent=None, end="\n", **kwargs):
         super().__init__(**kwargs)
         self.text = sep.join([str(a) for a in args])
         if dedent:
             self.text = utils.dedent(self.text)
+        self.end = end
 
     @property
     def _md(self):
-        # Block-level text ends with a newline so siblings don't run together.
-        text = self.text
-        if text and not text.endswith("\n"):
-            text = text + "\n"
-        return text
+        # Block-level text terminates with a configurable ``end`` (default
+        # "\n") so siblings don't run together. Only the trailing run of
+        # newlines is replaced -- internal newlines are preserved -- so a
+        # triple-quoted multi-line block doesn't double up its terminator.
+        if not self.text:
+            return ""
+        return self.text.rstrip("\n") + self.end
 
     @property
     def _html(self):
@@ -138,7 +148,11 @@ class Pre(Component):
         text = self.text + ("" if self.text.endswith("\n") else "\n")
         if not text.startswith("\n"):
             text = "\n" + text
-        return f"```{self.lang if self.lang else ''}{text}```\n"
+        # CommonMark: the outer fence must be longer than the longest run of
+        # backticks inside the code so nested fences don't break out.
+        longest = max((len(m) for m in re.findall(r"`+", self.text)), default=0)
+        fence = "`" * max(3, longest + 1)
+        return f"{fence}{self.lang or ''}{text}{fence}\n"
 
     @property
     def _html(self):
@@ -366,7 +380,7 @@ class Table(Component):
     for a data table, or build a figure grid with :meth:`figure_row`.
     """
 
-    data = None
+    data: "pd.DataFrame | None" = None
 
     def __init__(self, table=None, show_index=None, format="github", sep=",*", logger=None, **kwargs):
         super().__init__(logger=logger)
@@ -376,7 +390,12 @@ class Table(Component):
         if table is None:
             pass
         else:
-            import pandas as pd
+            try:
+                import pandas as pd
+            except ImportError as e:
+                raise ImportError(
+                    "CMX tables require pandas. Install with: pip install 'cmx[tables]'"
+                ) from e
 
             if isinstance(table, str):
                 self.data = pd.read_csv(StringIO(table), sep=sep)
@@ -393,6 +412,21 @@ class Table(Component):
     @property
     def _md(self):
         if not self.children:
+            # The default "github" format is rendered by our own pure-Python
+            # renderer -- no tabulate at runtime. Other formats still need
+            # tabulate (via pandas' to_markdown).
+            if self.format == "github" and not self.kwargs:
+                from .md_table import render
+
+                return render(self.data, index=bool(self.show_index)) + "\n"
+            try:
+                import tabulate  # noqa: F401  -- required by DataFrame.to_markdown
+            except ImportError as e:
+                raise ImportError(
+                    f"CMX tables in the '{self.format}' format require tabulate. "
+                    "Install with: pip install tabulate "
+                    "(the default 'github' format needs only pandas)."
+                ) from e
             return self.data.to_markdown(index=self.show_index, tablefmt=self.format, **self.kwargs) + "\n"
         # Flatten children into rows of cells. FigureRows expand to their
         # (titles / images / captions) bands; any other child yields its cells.
@@ -422,27 +456,47 @@ class _Factory:
     or as a ``with`` block.
     """
 
+    def _resolve_asset(self, name):
+        """Place a bare asset name under the resolved ``figdir``.
+
+        A name WITHOUT a directory component (e.g. ``"gradient.png"``) is placed
+        under the document's ``figdir``. A name WITH a directory (e.g.
+        ``"sub/x.png"``) is used AS-IS (explicit wins). Forward slashes are used
+        for the stored src so markdown links stay portable.
+        """
+        if not name:
+            return name
+        base, _tail = posixpath.split(name) if "/" in name else os.path.split(name)
+        if base:  # explicit directory -> as-is
+            return name
+        figdir = getattr(self, "figdir", "") or ""
+        return posixpath.join(figdir, name) if figdir else name
+
     def table(self, table=None, **kwargs):
         t = Table(table, logger=self.logger, **kwargs)
         self.children.append(t)
         return t
 
     def image(self, image=None, src=None, **kwargs):
+        src = self._resolve_asset(src)
         img = Image(image=image, src=src, logger=self.logger, **kwargs)
         self.children.append(img)
         return img
 
     def figure(self, image=None, src=None, title=None, caption=None, **kwargs):
+        src = self._resolve_asset(src)
         fig = Figure(image=image, src=src, title=title, caption=caption, logger=self.logger, **kwargs)
         self.children.append(fig)
         return fig
 
     def video(self, frames=None, src=None, **kwargs):
+        src = self._resolve_asset(src)
         v = video(frames=frames, src=src, logger=self.logger, **kwargs)
         self.children.append(v)
         return v
 
     def savefig(self, key, **kwargs):
+        key = self._resolve_asset(key)
         fig = Savefig(key, logger=self.logger, **kwargs)
         self.children.append(fig)
         return fig
@@ -457,15 +511,39 @@ class Html(_Factory, Component):
     tag = "body"
 
 
+# Block-level elements need a blank line before them in Markdown (tables,
+# images, code fences, figures, rows, videos). Subclasses (Print/Image/Savefig)
+# are covered via isinstance. Plain text blocks stay tight (single newline).
+_BLOCK_TYPES = (Pre, Table, Img, Figure, Row, Video)
+
+
 class Article(Html):
     tag = "article"
     class_name = "commonmark"
 
     @property
     def _md(self):
-        # Each child's _md already ends in a newline, so plain concatenation
-        # keeps blocks separated.
-        return "".join([c._md for c in self.children])
+        out = ""
+        for c in self.children:
+            if c is None:
+                continue
+            md = c._md
+            if not md:
+                continue
+            if isinstance(c, _BLOCK_TYPES):
+                # Block elements: drop their own leading newlines and ensure
+                # exactly one blank line separates them from prior output.
+                md = md.lstrip("\n")
+                if out:
+                    out = out.rstrip("\n") + "\n\n"
+            else:
+                # Text/inline: keep tight, just a single newline separator.
+                if out and not out.endswith("\n"):
+                    out += "\n"
+            out += md
+            if not out.endswith("\n"):
+                out += "\n"
+        return out
 
 
 class Print(Pre):

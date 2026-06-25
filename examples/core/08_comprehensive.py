@@ -7,11 +7,9 @@ This example combines multiple CMX features in a realistic workflow.
 from cmx import doc
 import pandas as pd
 import numpy as np
-import os
 
-os.makedirs("examples/core/figures", exist_ok=True)
-
-doc.config(filename="examples/core/08_comprehensive.md")
+# Anchored to this script's directory; figures land in the "08_comprehensive/" figdir.
+doc.config(__file__)
 
 doc @ """
 # Machine Learning Experiment Report
@@ -101,7 +99,7 @@ with doc:
         if x < 200:
             vis_data[max(0, y - 1) : min(100, y + 2), x : x + 2] = [0, 150, 255]
 
-    doc.image(vis_data, src="examples/core/figures/training_curve.png")
+    doc.image(vis_data, src="training_curve.png")
 
 doc @ """
 ## Conclusions
@@ -119,4 +117,4 @@ doc @ """
 
 doc.flush()
 
-print("\n✓ Comprehensive example complete! Check examples/core/08_comprehensive.md")
+print("\n✓ Comprehensive example complete! Check 08_comprehensive.md next to the script.")

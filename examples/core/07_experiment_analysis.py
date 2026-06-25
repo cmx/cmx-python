@@ -9,7 +9,7 @@ from cmx import doc
 import pandas as pd
 import numpy as np
 
-doc.config(filename="examples/core/07_experiment_analysis.md")
+doc.config(__file__)
 
 doc @ """
 # Experiment Analysis Report
@@ -76,4 +76,4 @@ with doc:
 
 doc.flush()
 
-print("\n✓ Experiment analysis example complete! Check examples/core/07_experiment_analysis.md")
+print("\n✓ Experiment analysis example complete! Check 07_experiment_analysis.md next to the script.")

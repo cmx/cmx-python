@@ -2,6 +2,7 @@
 # Working with Tables
 
 Tables are essential for displaying data and results.
+
 ```python
 "## Simple DataFrame" | doc  # Using postfix pipe syntax
 
@@ -17,6 +18,7 @@ data = pd.DataFrame(
 doc.table(data)
 ```
 ## Simple DataFrame
+
 | Model     |   Accuracy | Parameters   |
 |-----------|------------|--------------|
 | ResNet50  |       0.95 | 25.6M        |
@@ -38,6 +40,7 @@ doc.table(results, show_index=False)
 ```
 ## Experiment Results
 Here's a typical use case - showing experiment metrics:
+
 | Experiment   | Success Rate   |   Trials |
 |--------------|----------------|----------|
 | baseline     | 45.2%          |      100 |

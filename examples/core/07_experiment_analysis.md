@@ -3,11 +3,9 @@
 
 This is a typical experiment analysis workflow.
 
-
 ## Performance Comparison
 
 Comparing different model checkpoints:
-
 
 | Checkpoint | Success Rate | Num Trials |
 | ---------- | ------------ | ---------- |
@@ -20,8 +18,8 @@ Comparing different model checkpoints:
 The results show significant improvement over the baseline:
 
 ```python
-baseline = experiments[0]['success_rate']
-final = experiments[2]['success_rate']
+baseline = experiments[0]["success_rate"]
+final = experiments[2]["success_rate"]
 improvement = (final - baseline) / baseline
 
 doc.print(f"Baseline success rate: {baseline:.1%}")
@@ -41,9 +39,9 @@ Here's a more detailed breakdown using pandas:
 
 ```python
 df = pd.DataFrame(experiments)
-df['Success Rate'] = df['success_rate'].apply(lambda x: f"{x:.1%}")
-df = df[['checkpoint', 'Success Rate', 'num_trials']]
-df.columns = ['Checkpoint', 'Success Rate', 'Num Trials']
+df["Success Rate"] = df["success_rate"].apply(lambda x: f"{x:.1%}")
+df = df[["checkpoint", "Success Rate", "num_trials"]]
+df.columns = ["Checkpoint", "Success Rate", "Num Trials"]
 
 doc.table(df, show_index=False)
 ```

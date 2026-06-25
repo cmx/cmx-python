@@ -6,12 +6,9 @@ This example shows how to save and display images in CMX documentation.
 
 from cmx import doc
 import numpy as np
-import os
 
-# Ensure output directory exists
-os.makedirs("examples/core/figures", exist_ok=True)
-
-doc.config(filename="examples/core/04_images.md")
+# Anchored to this script's directory; figures land in the "04_images/" figdir.
+doc.config(__file__)
 
 doc @ """
 # Working with Images
@@ -27,7 +24,7 @@ with doc:
     random_image = (random_image * 255).astype(np.uint8)
 
     # Save and display
-    doc.image(random_image, src="examples/core/figures/random.png")
+    doc.image(random_image, src="random.png")
 
 with doc:
     doc @ "## Gradient Image"
@@ -39,7 +36,7 @@ with doc:
     gradient = np.stack([xx, yy, np.zeros_like(xx)], axis=-1)
     gradient = (gradient * 255).astype(np.uint8)
 
-    doc.image(gradient, src="examples/core/figures/gradient.png")
+    doc.image(gradient, src="gradient.png")
 
 with doc:
     doc @ "## Multiple Images in a Row"
@@ -49,8 +46,8 @@ with doc:
         for i in range(3):
             img = np.random.rand(50, 50, 3)
             img = (img * 255).astype(np.uint8)
-            doc.image(img, src=f"examples/core/figures/mini_{i}.png")
+            doc.image(img, src=f"mini_{i}.png")
 
 doc.flush()
 
-print("\n✓ Images example complete! Check examples/core/04_images.md")
+print("\n✓ Images example complete! Check 04_images.md next to the script.")

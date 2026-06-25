@@ -7,7 +7,7 @@ as YAML, a common pattern for documenting experiments.
 
 from cmx import doc
 
-doc.config(filename="examples/core/05_yaml_output.md")
+doc.config(__file__)
 
 doc @ """
 # YAML Output
@@ -36,4 +36,4 @@ with doc:
 
 doc.flush()
 
-print("\n✓ YAML output example complete! Check examples/core/05_yaml_output.md")
+print("\n✓ YAML output example complete! Check 05_yaml_output.md next to the script.")

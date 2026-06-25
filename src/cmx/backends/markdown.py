@@ -47,6 +47,8 @@ class CommonMark(components.Article):
         """
         return SkipContextManager(True)
 
+    _figdir_template = "{fname}"
+
     def __init__(self, filename=None, overwrite=True, root=None, prefix=None, logger=None):
         """
         :param filename: output markdown filename (auto-derived from the calling
@@ -59,21 +61,63 @@ class CommonMark(components.Article):
         self.logger = logger or SimpleLogger(root=root, prefix=prefix)
         self.config(filename=filename, overwrite=overwrite)
 
-    def config(self, filename=None, overwrite=True, src_prefix=None, logger=None):
+    def config(self, file=None, *, wd=None, figdir="{fname}", overwrite=True, filename=None, src_prefix=None, logger=None):
+        """Configure where script output lands.
+
+        :param file: EITHER a script path (``doc.config(__file__)``, ends with
+            ``.py``) OR an explicit output path (ends with ``.md``). Outputs
+            resolve relative to the script/output, not the cwd.
+        :param wd: working directory; overrides the default derived from
+            ``file``/``filename`` (or the cwd when neither is given).
+        :param figdir: a template string for the figure directory. ``{fname}``
+            expands to the markdown stem. Default ``"{fname}"``.
+        :param overwrite: clear the file on configure instead of appending.
+        :param filename: explicit output path (back-compat keyword).
+        :param logger: a pre-built logger (e.g. to a remote server).
+        """
         self.overwrite = overwrite
         self.logger = logger or self.logger
-        if filename:
-            self.__filename = filename
+        self._figdir_template = figdir
+
+        # Resolve the source of truth for the output basename and working dir.
+        md_basename = None
+        default_wd = None
+        if file is not None and str(file).endswith(".py"):
+            # ``file`` is the SCRIPT.
+            stem = os.path.splitext(os.path.basename(file))[0]
+            default_wd = os.path.dirname(os.path.abspath(file))
+            md_basename = f"{stem}.md"
+        else:
+            # Treat ``file`` (a non-.py path) or ``filename`` as the output md.
+            path = file if file is not None else filename
+            if path:
+                dirname = os.path.dirname(path)
+                default_wd = os.path.dirname(os.path.abspath(path)) if dirname else os.getcwd()
+                md_basename = os.path.basename(path)
+
+        if md_basename is not None:
+            resolved_wd = os.path.abspath(wd) if wd else default_wd
+            self.logger.root = resolved_wd
+            self.__filename = md_basename
             if self.overwrite:
                 self.logger.log_text("", filename=self.filename, overwrite=True)
 
+            abs_md = os.path.join(resolved_wd, md_basename)
             if self.logger.root.startswith("http"):
-                print(_green("File output at " + self.logger.get_dash_url() + " " + self.__filename))
+                print(_green("File output at " + self.logger.get_dash_url() + " " + md_basename))
             else:
                 from urllib import parse
 
-                print(_green("File output at file://" + parse.quote(os.path.realpath(self.__filename))))
+                print(_green("File output at file://" + parse.quote(abs_md)))
+        elif wd is not None:
+            # No output path given, but an explicit working dir was requested.
+            self.logger.root = os.path.abspath(wd)
         return self
+
+    @property
+    def figdir(self):
+        stem = os.path.splitext(os.path.basename(self.filename))[0]
+        return self._figdir_template.replace("{fname}", stem)
 
     def new(self, filename=None, **kwargs):
         if filename:

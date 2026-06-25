@@ -11,8 +11,8 @@ This example demonstrates all the different operator syntaxes available in CMX:
 
 from cmx import doc
 
-# Configure output file
-doc.config(filename="examples/core/09_operator_syntax.md")
+# Configure output file (anchored to this script's directory)
+doc.config(__file__)
 
 # Section 1: Prefix @ Operator
 with doc:
@@ -133,4 +133,4 @@ with doc:
 # Flush the document
 doc.flush()
 
-print("✓ Operator syntax example complete! Check examples/core/09_operator_syntax.md")
+print("✓ Operator syntax example complete! Check 09_operator_syntax.md next to the script.")
