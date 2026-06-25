@@ -2,7 +2,7 @@
 
 All notable changes to CMX will be documented in this file.
 
-## [0.0.48] - 2026-06-25
+## [0.0.49] - 2026-06-25
 
 ### Added
 
@@ -10,7 +10,7 @@ All notable changes to CMX will be documented in this file.
 - `doc.config(__file__)` script-relative output; `figdir` template (default `{fname}`) with bare-name → figdir asset resolution.
 - Overridable `end=` on text blocks (default `"\n"`).
 - Pure-Python GitHub-table renderer (`md_table`); `tabulate` is no longer a runtime dependency.
-- Golden-file test harness; suite expanded to 100 tests.
+- Golden-file test harness; suite expanded to 108 tests.
 
 ### Changed
 
@@ -20,7 +20,14 @@ All notable changes to CMX will be documented in this file.
 
 ### Removed
 
-- `SimpleLogger` — its I/O moved into the default lifecycle hooks.
+- `SimpleLogger` — its I/O moved into the default lifecycle hooks (storage now flows through `on_save`/`on_flush`).
+
+## [0.0.48] - 2026-06-25
+
+### Added
+
+- `doc.table(file=...)` and `doc.yaml(file=...)` load data straight from disk — csv/tsv/json/parquet/excel and list-of-records yaml (#18).
+- Matplotlib figure documentation and example; `doc.savefig` matplotlib kwargs (`dpi`, `bbox_inches`, ...) are routed to matplotlib only and kept out of the `<img>` markup (#17).
 
 ## [0.0.46]
 

@@ -85,7 +85,7 @@ def test_image(tmp_path):
 
 
 def test_image_src(tmp_path):
-    # root the logger at tmp_path so relative image srcs are written there.
+    # root the document at tmp_path so relative image srcs are written there.
     local_doc = CommonMark(filename=str(tmp_path / "test_image_src.md"), root=str(tmp_path))
 
     img = _gradient_image(channels=1)

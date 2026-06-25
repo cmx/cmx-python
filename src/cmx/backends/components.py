@@ -26,9 +26,39 @@ from .. import utils
 from ..utils import is_subclass, to_snake  # re-exported for backwards compatibility
 
 
+def read_table(file, sep=None, **kwargs):
+    """Load a tabular file into a pandas ``DataFrame``, inferred by extension.
+
+    Supports ``.csv`` / ``.tsv`` (text), ``.json``, ``.parquet``, and Excel
+    (``.xls`` / ``.xlsx``); ``.yaml`` / ``.yml`` are parsed and fed to the
+    ``DataFrame`` constructor. Extra ``kwargs`` are forwarded to the matching
+    pandas reader. ``sep`` overrides the delimiter for text files (defaulting to
+    a tab for ``.tsv`` and a comma otherwise). Unknown extensions are read as CSV.
+    """
+    import pandas as pd
+
+    ext = os.path.splitext(file)[1].lower()
+    if ext == ".json":
+        return pd.read_json(file, **kwargs)
+    if ext == ".parquet":
+        return pd.read_parquet(file, **kwargs)
+    if ext in (".xls", ".xlsx"):
+        return pd.read_excel(file, **kwargs)
+    if ext in (".yaml", ".yml"):
+        import yaml
+
+        with open(file) as f:
+            return pd.DataFrame(yaml.safe_load(f))
+    if sep is None:
+        sep = "\t" if ext == ".tsv" else ","
+    return pd.read_csv(file, sep=sep, **kwargs)
+
+
 def attrs(class_name=None, **kwargs):
     attrs_str = f'class="{class_name}"' if class_name else ""
-    attrs_str += " ".join([k.replace("_", "-") + f'="{str(v)}"' for k, v in kwargs.items()])
+    # Drop ``None`` values so optional attrs (e.g. an unset width/height) don't
+    # render as the literal string ``width="None"``.
+    attrs_str += " ".join([k.replace("_", "-") + f'="{str(v)}"' for k, v in kwargs.items() if v is not None])
     return attrs_str
 
 
@@ -302,6 +332,17 @@ class Figure(Component):
 
 
 class Savefig(Figure):
+    """Save the current matplotlib figure to ``key`` and reference it inline.
+
+    ``key`` is the destination path (an optional ``?...`` query suffix is
+    stripped before writing, so it can double as a cache-buster in the ``src``).
+    ``title``/``caption``/``width``/``height``/``zoom`` control how the figure is
+    displayed; every other keyword (``dpi``, ``bbox_inches``, ``transparent``,
+    ``facecolor``, ``format`` ...) is forwarded untouched to matplotlib's
+    ``savefig`` (through the document's ``on_save`` hook) and is *not* leaked
+    into the ``<img>`` tag.
+    """
+
     def __init__(self, key, caption=None, width=None, height=None, zoom=None, **kwargs):
         super().__init__(src=key, width=width, height=height, caption=caption, zoom=zoom, **kwargs)
 
@@ -399,7 +440,7 @@ class Table(Component):
 
     data: "pd.DataFrame | None" = None
 
-    def __init__(self, table=None, show_index=None, format="github", sep=",*", doc=None, **kwargs):
+    def __init__(self, table=None, file=None, show_index=None, format="github", sep=",*", doc=None, **kwargs):
         super().__init__()
         # ``doc`` is threaded so figure rows can save nested assets via the
         # document's ``on_save`` hook.
@@ -407,7 +448,12 @@ class Table(Component):
         self.show_index = show_index
         self.kwargs = kwargs  # forwarded to pandas' to_markdown / to_html
         self.format = format
-        if table is None:
+        if file is not None:
+            # Load tabular data straight from disk (csv/tsv/json/parquet/excel/yaml).
+            # ``,*`` is the constructor's regex default for inline strings; let
+            # read_table infer the delimiter unless the caller set a real one.
+            self.data = read_table(file, sep=None if sep == ",*" else sep)
+        elif table is None:
             pass
         else:
             try:

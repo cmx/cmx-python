@@ -136,10 +136,11 @@ with doc:
     doc.savefig("plot.png")
 ```
 
-The filename resolves through figdir exactly like `doc.image`, so `"plot.png"` lands under the document's figdir.
+The filename resolves through figdir exactly like `doc.image`, so `"plot.png"` lands under the document's figdir. For dpi control, figure tables, and transparent backgrounds, see [Matplotlib Figures](figures.md).
 
 ## Next steps
 
+- [Matplotlib Figures](figures.md) — save plots with `doc.savefig` (dpi, figure tables)
 - [Configuration](configuration.md) — control figdir and where assets are written
 - [Installation](installation.md) — install the `images` and `figures` extras
 - [Tables](tables.md) — build figure grids alongside tabular data

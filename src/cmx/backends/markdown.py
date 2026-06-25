@@ -272,9 +272,18 @@ class CommonMark(components.Article):
         self.on_block(kind="code", node=p, doc=self)
         return p
 
-    def yaml(self, data, **kwargs):
+    def yaml(self, data=None, file=None, **kwargs):
+        """Render YAML as a code block.
+
+        Pass ``data`` to dump a Python object, or ``file=`` to read a ``.yaml``
+        file straight from disk (its contents are shown verbatim, comments and
+        all).
+        """
         import yaml
 
+        if file is not None:
+            with open(file) as f:
+                return self.pre(f.read().rstrip(), lang="yaml")
         return self.pre(yaml.dump(data).rstrip(), lang="yaml")
 
     def csv(self, csv, show_index=False, **kwargs):
