@@ -60,7 +60,10 @@ dev = [
     "tabulate>=0.8.0",
 ]
 
-# Documentation packages (caps widened to admit current Sphinx/myst majors)
+# Documentation packages (caps widened to admit current Sphinx/myst majors).
+# Pulls cmx[all] so autodoc can import every feature module when building the
+# API reference -- this makes `pip install -e '.[docs]'` self-sufficient and is
+# the single source of truth for the Read the Docs build (see .readthedocs.yaml).
 docs = [
     "sphinx>=7.1.2,<10",
     "furo",
@@ -69,6 +72,7 @@ docs = [
     "sphinx-copybutton",
     "sphinx-design",
     "linkify-it-py>=2.0",
+    "cmx[all]",
 ]
 
 # Server packages (optional). NOTE: the Sanic server is an out-of-scope stub;

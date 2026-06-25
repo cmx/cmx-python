@@ -14,9 +14,11 @@ build:
 sphinx:
   configuration: docs/conf.py
 
-# Optionally declare the Python requirements required to build your docs
+# Install cmx with the `docs` extra -- the single source of truth for the docs
+# toolchain and runtime deps autodoc needs (defined in pyproject.toml).
 python:
   install:
-    - requirements: docs/requirements.txt
     - method: pip
       path: .
+      extra_requirements:
+        - docs
