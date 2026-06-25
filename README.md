@@ -68,7 +68,7 @@ The `with doc:` block captures its own source as a code fence and runs it; `doc.
 **Add text three equivalent ways.** Each appends a text block and returns `doc`:
 
 ```python
-doc("## Results")          # call form
+doc("## Results", end="\n")   # call form (end="\n" is the default)
 doc @ "## Results"         # prefix @ operator
 "## Results" | doc         # postfix | operator
 ```

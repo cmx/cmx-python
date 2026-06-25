@@ -63,7 +63,7 @@ Use `doc.print(...)` for computed output, and `doc @ "text"` to add Markdown suc
 ```python
 doc @ "# Title"      # prefix
 "# Title" | doc      # postfix
-doc("# Title")       # call
+doc("# Title", end="\n")       # call (end="\n" is the default)
 ```
 
 All three append text and return `doc`. See [Markdown](markdown.md) for the full treatment, including multi-line dedent and `end=` control.
