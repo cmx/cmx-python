@@ -75,6 +75,13 @@ yaml
 
 ```{toctree}
 :maxdepth: 1
+:caption: Integrations
+
+hooks
+```
+
+```{toctree}
+:maxdepth: 1
 :caption: Reference
 
 api/index
