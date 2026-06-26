@@ -207,25 +207,24 @@ wheels = [
 
 [[package]]
 name = "cmx"
-version = "0.0.47"
+version = "0.0.49"
 source = { editable = "." }
-dependencies = [
-    { name = "pandas" },
-    { name = "tabulate" },
-]
 
 [package.optional-dependencies]
 all = [
     { name = "matplotlib" },
     { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
     { name = "numpy", version = "2.5.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
+    { name = "pandas" },
     { name = "pillow" },
     { name = "pyyaml" },
 ]
 dev = [
     { name = "black" },
+    { name = "pandas" },
     { name = "pylint" },
     { name = "pytest" },
+    { name = "tabulate" },
 ]
 docs = [
     { name = "furo" },
@@ -248,6 +247,9 @@ server = [
     { name = "killport" },
     { name = "sanic" },
 ]
+tables = [
+    { name = "pandas" },
+]
 yaml = [
     { name = "pyyaml" },
 ]
@@ -263,7 +265,9 @@ requires-dist = [
     { name = "myst-parser", marker = "extra == 'docs'", specifier = ">=3.0,<6" },
     { name = "numpy", marker = "extra == 'all'", specifier = ">=1.18.0" },
     { name = "numpy", marker = "extra == 'images'", specifier = ">=1.18.0" },
-    { name = "pandas", specifier = ">=1.0.0" },
+    { name = "pandas", marker = "extra == 'all'", specifier = ">=1.0.0" },
+    { name = "pandas", marker = "extra == 'dev'", specifier = ">=1.0.0" },
+    { name = "pandas", marker = "extra == 'tables'", specifier = ">=1.0.0" },
     { name = "pillow", marker = "extra == 'all'", specifier = ">=8.0.0" },
     { name = "pillow", marker = "extra == 'images'", specifier = ">=8.0.0" },
     { name = "pylint", marker = "extra == 'dev'", specifier = ">=3.0" },
@@ -275,9 +279,9 @@ requires-dist = [
     { name = "sphinx-autobuild", marker = "extra == 'docs'" },
     { name = "sphinx-copybutton", marker = "extra == 'docs'" },
     { name = "sphinx-design", marker = "extra == 'docs'" },
-    { name = "tabulate", specifier = ">=0.8.0" },
+    { name = "tabulate", marker = "extra == 'dev'", specifier = ">=0.8.0" },
 ]
-provides-extras = ["images", "figures", "yaml", "all", "dev", "docs", "server"]
+provides-extras = ["tables", "images", "figures", "yaml", "all", "dev", "docs", "server"]
 
 [[package]]
 name = "colorama"

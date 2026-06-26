@@ -29,6 +29,20 @@ def _green(message):
     return f"\033[32m{message}\033[0m"
 
 
+def _swap_py_suffix(path):
+    """Swap a trailing ``.py`` postfix for ``.md``.
+
+    A live document must never write its markdown back onto the source script.
+    When a ``.py`` path is used to derive the output filename (e.g. an auto-
+    derived name, or ``doc.config(filename=__file__)``), swap the ``.py`` postfix
+    for ``.md`` so the script can't overwrite itself. Non-``.py`` paths (an
+    explicit ``.md`` output) are returned unchanged.
+    """
+    if path and path.endswith(".py"):
+        return path[:-3] + ".md"
+    return path
+
+
 class CommonMark(components.Article):
     __filename = None
     counter = 0
@@ -171,7 +185,8 @@ class CommonMark(components.Article):
             if path:
                 dirname = os.path.dirname(path)
                 default_wd = os.path.dirname(os.path.abspath(path)) if dirname else os.getcwd()
-                md_basename = os.path.basename(path)
+                # Swap a trailing .py postfix so a script never overwrites itself.
+                md_basename = _swap_py_suffix(os.path.basename(path))
 
         if md_basename is not None:
             resolved_wd = os.path.abspath(wd) if wd else default_wd
@@ -223,7 +238,8 @@ class CommonMark(components.Article):
             if filename.endswith("__init__.py"):
                 self.__filename = filename[:-11] + "README.md"
             else:
-                self.__filename = filename.replace(".py", ".md")
+                # Postfix swap (.py -> .md) so the script never overwrites itself.
+                self.__filename = _swap_py_suffix(filename)
 
             if self.overwrite:
                 self.clear()

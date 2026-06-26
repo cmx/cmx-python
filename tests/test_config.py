@@ -82,6 +82,34 @@ def test_back_compat_md_positional(tmp_path):
     assert (tmp_path / "t.md").read_text().strip() == "hi"
 
 
+def test_filename_kwarg_py_postfix_swapped(tmp_path):
+    # Regression: a .py path (e.g. doc.config(filename=__file__)) must NOT be used
+    # verbatim as the output -- that would overwrite the source script. The .py
+    # postfix is swapped to .md.
+    script = tmp_path / "report.py"
+    script.write_text("print('source')\n")
+
+    doc = CommonMark()
+    doc.config(filename=str(script))
+
+    assert doc.filename == "report.md"
+    doc @ "hello"
+    doc.flush()
+
+    assert (tmp_path / "report.md").read_text().strip() == "hello"
+    # the source script is left untouched
+    assert script.read_text() == "print('source')\n"
+
+
+def test_swap_py_suffix_helper():
+    from cmx.backends.markdown import _swap_py_suffix
+
+    assert _swap_py_suffix("a/b/script.py") == "a/b/script.md"
+    assert _swap_py_suffix("report.md") == "report.md"
+    assert _swap_py_suffix("noext") == "noext"
+    assert _swap_py_suffix("") == ""
+
+
 def test_explicit_wd_override(tmp_path):
     script = str(tmp_path / "nested" / "04_images.py")
     override = tmp_path / "elsewhere"
