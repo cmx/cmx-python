@@ -2,6 +2,18 @@
 
 All notable changes to CMX will be documented in this file.
 
+## [0.0.51] - 2026-06-26
+
+### Changed
+
+- `figdir` default is now context-aware: a **named** document (`doc.config(__file__)` / `doc.config(filename=...)`) still uses the per-document `{fname}` folder, while an **unnamed** document (a bare `doc` / REPL with no resolved name) falls back to a shared `figures/` directory instead of a confusing per-stem folder. Explicit `figdir=...` still wins. Pass `doc.config(__file__, figdir="figures")` to collect plots from several scripts into one shared folder.
+- Figure-row assets (`row.savefig` / `row.figure` / `row.video`) now resolve bare names through the document's `figdir`, exactly like top-level `doc.image` / `doc.savefig`. Previously they were used as-is, bypassing `figdir` — so a bare name landed in the document root instead of under `figdir`. Slashed paths are still used verbatim.
+
+### Fixed
+
+- Matplotlib figures docs/skill/example no longer hardcode a `figures/` prefix in `savefig` calls. A slashed name bypasses `figdir`, which produced surprising `figures/<name>.png` paths and broken relative links in the `examples/core/10_matplotlib_figures` output. Examples now pass bare names and rely on `figdir` (one consistent rule for images and figures).
+- `table.figure_row().savefig(...)` no longer renders the caption twice. The caption belongs to the captions band; it was also being drawn inside the image cell's nested table.
+
 ## [0.0.50] - 2026-06-25
 
 ### Fixed

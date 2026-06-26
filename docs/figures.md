@@ -23,7 +23,7 @@ from cmx import doc
 import matplotlib.pyplot as plt
 import numpy as np
 
-doc.config(filename="output.md")
+doc.config(__file__)
 
 with doc:
     doc @ "## Sine Wave"
@@ -32,14 +32,20 @@ with doc:
     plt.figure(figsize=(5, 3))
     plt.plot(xs, np.sin(2 * np.pi * xs))
 
-    doc.savefig("figures/sine.png")
+    doc.savefig("sine.png")
     plt.close()
 
 doc.flush()
 ```
 
-The figure is written to `figures/sine.png` (directories are created for you) and
-displayed inline.
+Pass a **bare name** like `"sine.png"` and it resolves through the document's
+[figdir](configuration.md) — exactly like `doc.image`. With
+`doc.config(__file__)` the figure lands under the per-script folder (e.g.
+`myplot/sine.png` for `myplot.py`); directories are created for you and the
+figure is displayed inline. To collect plots from several scripts into one shared
+folder, configure `doc.config(__file__, figdir="figures")` so bare names land in
+`figures/`. Only pass a slashed path (`"shared/sine.png"`) when an asset must live
+somewhere specific — a slash bypasses figdir and is used verbatim.
 
 ## Controlling Resolution and Layout
 
@@ -54,7 +60,7 @@ matplotlib's own `savefig`. The most common ones:
 
 ```python
 with doc:
-    doc.savefig("figures/plot.png", dpi=200, bbox_inches="tight", transparent=True)
+    doc.savefig("plot.png", dpi=200, bbox_inches="tight", transparent=True)
 ```
 
 These options affect the saved file only — they never leak into the generated
@@ -68,7 +74,7 @@ saving it): `title`, `caption`, `width`, `height`, and `zoom`.
 ```python
 with doc:
     doc.savefig(
-        "figures/loss.png",
+        "loss.png",
         dpi=150,              # -> matplotlib
         caption="Training loss",  # -> document
         zoom=0.5,                 # -> document
@@ -92,7 +98,7 @@ with doc:
             plt.figure(figsize=(4, 3))
             plt.plot(xs, fn(xs))
             row.savefig(
-                f"figures/{name}.png",
+                f"{name}.png",
                 title=name.capitalize(),
                 caption=f"y = {name}(x)",
                 dpi=100,

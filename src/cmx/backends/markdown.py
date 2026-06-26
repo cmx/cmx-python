@@ -65,7 +65,10 @@ class CommonMark(components.Article):
         self.on_skip(doc=self)
         return SkipContextManager(True)
 
-    _figdir_template = "{fname}"
+    # Fallback figure-directory template for a document whose name is never
+    # resolved. ``config()`` upgrades this to "{fname}" once a script/output
+    # name is known (see ``config``); a bare ``doc`` keeps the shared "figures".
+    _figdir_template = "figures"
 
     def __init__(self, filename=None, overwrite=True, root=None, prefix=None):
         """
@@ -155,7 +158,7 @@ class CommonMark(components.Article):
 
     # (``on_inline`` is intentionally deferred -- not implemented yet.)
 
-    def config(self, file=None, *, wd=None, figdir="{fname}", overwrite=True, filename=None, src_prefix=None):
+    def config(self, file=None, *, wd=None, figdir=None, overwrite=True, filename=None, src_prefix=None):
         """Configure where script output lands.
 
         :param file: EITHER a script path (``doc.config(__file__)``, ends with
@@ -164,12 +167,14 @@ class CommonMark(components.Article):
         :param wd: working directory; overrides the default derived from
             ``file``/``filename`` (or the cwd when neither is given).
         :param figdir: a template string for the figure directory. ``{fname}``
-            expands to the markdown stem. Default ``"{fname}"``.
+            expands to the markdown stem. When omitted, the default is the
+            per-document ``"{fname}"`` folder if the script/output name is known
+            (e.g. ``doc.config(__file__)``), and a shared ``"figures"`` directory
+            otherwise.
         :param overwrite: clear the file on configure instead of appending.
         :param filename: explicit output path (back-compat keyword).
         """
         self.overwrite = overwrite
-        self._figdir_template = figdir
 
         # Resolve the source of truth for the output basename and working dir.
         md_basename = None
@@ -187,6 +192,13 @@ class CommonMark(components.Article):
                 default_wd = os.path.dirname(os.path.abspath(path)) if dirname else os.getcwd()
                 # Swap a trailing .py postfix so a script never overwrites itself.
                 md_basename = _swap_py_suffix(os.path.basename(path))
+
+        # figdir default: a per-document folder named after the script/output
+        # when we know it ("{fname}" -> stem), and a shared "figures" directory
+        # when we don't (a bare ``doc`` / REPL with no resolved name).
+        if figdir is None:
+            figdir = "{fname}" if md_basename is not None else "figures"
+        self._figdir_template = figdir
 
         if md_basename is not None:
             resolved_wd = os.path.abspath(wd) if wd else default_wd
@@ -215,8 +227,13 @@ class CommonMark(components.Article):
 
     @property
     def figdir(self):
+        template = self._figdir_template
+        # Only resolve the (possibly lazy) filename when the template needs it,
+        # so a literal default like "figures" stays side-effect-free.
+        if "{fname}" not in template:
+            return template
         stem = os.path.splitext(os.path.basename(self.filename))[0]
-        return self._figdir_template.replace("{fname}", stem)
+        return template.replace("{fname}", stem)
 
     def new(self, filename=None, **kwargs):
         if filename:

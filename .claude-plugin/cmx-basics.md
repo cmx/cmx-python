@@ -77,12 +77,14 @@ On configure, CMX prints a green `File output at file://...` line you can click 
 
 ### 3. The `figdir` template — where assets land
 
-Assets (images, figures, videos) go into a **figure directory** (`figdir`). It is a template string; `{fname}` expands to the Markdown file's name **without** its extension. The default is `"{fname}"`, so each document gets its own per-file asset folder.
+Assets (images, figures, videos) go into a **figure directory** (`figdir`). It is a template string; `{fname}` expands to the Markdown file's name **without** its extension. When you omit `figdir`, the default is the per-document `"{fname}"` folder when the document's name is known (`doc.config(__file__)` / `doc.config(filename=...)`), and a shared `"figures"` directory otherwise (a bare `doc` / REPL with no resolved name).
 
 ```python
 doc.config(__file__)                   # 04_images.py -> assets in 04_images/
+doc.config(__file__, figdir="figures") # collect plots into a shared figures/
 doc.config(__file__, figdir="assets")  # all assets in assets/
 doc.config(__file__, figdir="")        # assets beside the .md, no subfolder
+doc                                    # bare doc, no config -> assets in figures/
 ```
 
 Read the resolved values back from `doc.filename` (the basename **with** extension, e.g. `report.md`) and `doc.figdir` (the name **without** extension, e.g. `report`).

@@ -12,7 +12,6 @@ Run with::
 """
 
 from cmx import doc
-import os
 
 # Setup code: kept out of the rendered document with ``doc.hide``.
 with doc.hide:
@@ -22,9 +21,10 @@ with doc.hide:
     import matplotlib.pyplot as plt
     import numpy as np
 
-    os.makedirs("examples/core/figures", exist_ok=True)
-
-doc.config(filename="examples/core/10_matplotlib_figures.md")
+# Anchored to this script's directory; bare savefig names resolve through the
+# figdir. ``figdir="figures"`` collects every plot into a shared ``figures/``
+# folder (and creates it for you) -- pass bare names, never slashed paths.
+doc.config(__file__, figdir="figures")
 
 doc @ """
 # Working with Matplotlib Figures
@@ -48,7 +48,7 @@ with doc:
     plt.title("sine wave")
 
     # dpi and bbox_inches go to matplotlib; only the path is referenced in markdown.
-    doc.savefig("examples/core/figures/sine.png", dpi=150, bbox_inches="tight")
+    doc.savefig("sine.png", dpi=150, bbox_inches="tight")
     plt.close()
 
 with doc:
@@ -65,8 +65,8 @@ with doc:
     plt.title("damped oscillation")
 
     # Save the same figure twice at different resolutions.
-    doc.savefig("examples/core/figures/damped_72dpi.png", dpi=72, bbox_inches="tight")
-    doc.savefig("examples/core/figures/damped_200dpi.png", dpi=200, bbox_inches="tight")
+    doc.savefig("damped_72dpi.png", dpi=72, bbox_inches="tight")
+    doc.savefig("damped_200dpi.png", dpi=200, bbox_inches="tight")
     plt.close()
 
 with doc:
@@ -87,7 +87,7 @@ with doc:
             plt.plot(xs, fn(xs))
             plt.title(name)
             row.savefig(
-                f"examples/core/figures/fn_{name}.png",
+                f"fn_{name}.png",
                 title=name.capitalize(),
                 caption=f"y = {name}(x)",
                 dpi=100,
@@ -107,7 +107,7 @@ with doc:
     plt.bar(["a", "b", "c"], [3, 7, 5])
     plt.title("counts")
 
-    doc.savefig("examples/core/figures/bars.png", dpi=120, bbox_inches="tight", transparent=True)
+    doc.savefig("bars.png", dpi=120, bbox_inches="tight", transparent=True)
     plt.close()
 
 doc.flush()

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "cmx"
-version = "0.0.50"
+version = "0.0.51"
 description = "REPL with Python Scripts via live documents - A documentation library for creating interactive markdown documentation from Python code"
 license = { text = "MIT" }
 readme = "README.md"
