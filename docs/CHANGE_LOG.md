@@ -2,6 +2,12 @@
 
 All notable changes to CMX will be documented in this file.
 
+## [0.0.50] - 2026-06-25
+
+### Fixed
+
+- Postfix swap (`.py` → `.md`) when deriving the output filename, so a live document never overwrites its own source script. `config()` and the auto-derived filename previously used a `.py` path verbatim / a fragile substring `replace(".py", ".md")`; passing a `.py` path (e.g. `doc.config(filename=__file__)`) could make the document overwrite the script. Added `_swap_py_suffix` plus regression tests.
+
 ## [0.0.49] - 2026-06-25
 
 ### Added
