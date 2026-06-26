@@ -48,15 +48,23 @@ The Markdown name still comes from the script (`report.md`), but the file and it
 
 ## The figdir template
 
-Assets go into a **figure directory** (`figdir`). `figdir` is a template, and `{fname}` expands to the Markdown file's name **without its extension** (`report.md` → `report`) — distinct from `doc.filename`, which is the full name *with* extension. The default is `"{fname}"`, so each document gets its own folder named after it.
+Assets go into a **figure directory** (`figdir`). `figdir` is a template, and `{fname}` expands to the Markdown file's name **without its extension** (`report.md` → `report`) — distinct from `doc.filename`, which is the full name *with* extension.
+
+When you omit `figdir`, the default depends on whether the document's name is known:
+
+- **Named document** (`doc.config(__file__)` or `doc.config(filename=...)`) → the per-document `"{fname}"` folder, so each script gets its own asset folder named after it.
+- **Unnamed document** (a bare `doc`, or a REPL session with no resolved name) → a shared `"figures"` directory.
 
 ```python
-doc.config(__file__)                  # 04_images.py -> assets in 04_images/
-doc.config(__file__, figdir="assets") # all assets in assets/
-doc.config(__file__, figdir="")       # assets beside the .md, no subfolder
+doc.config(__file__)                    # 04_images.py -> assets in 04_images/
+doc.config(filename="report.md")        # assets in report/
+doc.config(__file__, figdir="figures")  # collect plots into a shared figures/
+doc.config(__file__, figdir="assets")   # all assets in assets/
+doc.config(__file__, figdir="")         # assets beside the .md, no subfolder
+doc                                     # bare doc, no config -> assets in figures/
 ```
 
-A per-file folder keeps assets from different scripts from colliding. Point several documents at a shared `figdir="assets"` only when you want them to share one folder.
+A per-file folder keeps assets from different scripts from colliding. Point several documents at a shared `figdir="figures"` (or `"assets"`) only when you want them to share one folder.
 
 Read the resolved directory back from the `doc.figdir` property:
 

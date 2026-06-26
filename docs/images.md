@@ -58,7 +58,7 @@ CMX writes the link without touching the file. The same resolution rules apply: 
 
 The `src` you pass is resolved against the document's **figdir**, the folder where assets are written and linked from.
 
-- A **bare name** (no slash, e.g. `"random.png"`) is placed **under figdir**. By default figdir is `{fname}` — a per-document folder named after the script, so `04_images.py` writes to `04_images/`.
+- A **bare name** (no slash, e.g. `"random.png"`) is placed **under figdir**. By default figdir is the per-document `{fname}` folder named after the script when you configure with a name, so `04_images.py` writes to `04_images/`; an unnamed `doc` (a REPL session) falls back to a shared `figures/` directory.
 - A name **with a directory** (e.g. `"shared/diagram.png"`) is used **as-is**. An explicit path always wins.
 - Links are written **relative to the Markdown file**, so the document stays portable.
 

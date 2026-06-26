@@ -1,6 +1,6 @@
 {
   "name": "cmx",
-  "version": "0.0.50",
+  "version": "0.0.51",
   "description": "CMX - REPL with Python Scripts via live documents",
   "author": "Ge Yang",
   "skills": [

@@ -71,10 +71,27 @@ def test_figure_row_savefig_builds_table():
     assert "**Plot A**" in md and "**Plot B**" in md
     assert "figures/a.png" in md and "figures/b.png" in md
     assert "cap a" in md and "cap b" in md
+    # The caption lives in the captions band only -- it must not also be rendered
+    # inside the image cell (a regression that duplicated it).
+    assert md.count("cap a") == 1 and md.count("cap b") == 1
     # dpi went to on_save for both figures, not into the table cells.
     assert [c[0] for c in rec.calls] == ["figures/a.png", "figures/b.png"]
     assert all(c[2] == {"dpi": 100} for c in rec.calls)
     assert "dpi" not in md
+
+
+def test_figure_row_bare_names_resolve_under_figdir():
+    # An unconfigured doc falls back to a shared "figures" figdir; a bare name in
+    # a figure row lands there, while a slashed name is used as-is -- the same
+    # rule as top-level doc.savefig / doc.image.
+    doc, rec = _doc()
+
+    table = doc.table()
+    with table.figure_row() as row:
+        row.savefig("plot.png", title="Bare")
+        row.savefig("sub/explicit.png", title="Slashed")
+
+    assert [c[0] for c in rec.calls] == ["figures/plot.png", "sub/explicit.png"]
 
 
 def test_attrs_drops_none_values():

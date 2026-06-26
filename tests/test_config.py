@@ -22,7 +22,8 @@ def test_config_script_path_derives_md_wd_and_figdir(tmp_path):
     assert doc.filename == "04_images.md"
     assert doc.wd == str(tmp_path)
     assert os.path.join(doc.wd, doc.filename) == str(tmp_path / "04_images.md")
-    # default figdir template is "{fname}" -> the md stem
+    # With a known script/output name, figdir defaults to the per-document
+    # "{fname}" folder -> the md stem.
     assert doc.figdir == "04_images"
 
 
@@ -108,6 +109,37 @@ def test_swap_py_suffix_helper():
     assert _swap_py_suffix("report.md") == "report.md"
     assert _swap_py_suffix("noext") == "noext"
     assert _swap_py_suffix("") == ""
+
+
+def test_default_figdir_is_figures_without_a_name(tmp_path):
+    # A document with no resolved script/output name falls back to a shared
+    # "figures" directory instead of a per-document folder.
+    doc = CommonMark()
+    doc.config(wd=str(tmp_path))  # working dir only, no script/output name
+
+    assert doc.figdir == "figures"
+    img = doc.image(_arr(), src="a.png")
+    assert img.src == "figures/a.png"
+    assert "figures/a.png" in img._md
+    assert os.path.exists(tmp_path / "figures" / "a.png")
+
+
+def test_naming_a_document_upgrades_figdir_to_stem(tmp_path):
+    # Re-configuring with a script/output name switches the default away from the
+    # "figures" fallback to the per-document "{fname}" folder.
+    doc = CommonMark()
+    doc.config(wd=str(tmp_path))
+    assert doc.figdir == "figures"
+
+    doc.config(file=str(tmp_path / "report.py"))
+    assert doc.figdir == "report"
+
+
+def test_explicit_figdir_overrides_figures_default(tmp_path):
+    # An explicit figdir still wins, even with no script/output name.
+    doc = CommonMark()
+    doc.config(wd=str(tmp_path), figdir="assets")
+    assert doc.figdir == "assets"
 
 
 def test_explicit_wd_override(tmp_path):

@@ -56,13 +56,15 @@ def test_table():
         row.figure(src="some_file.png", title="some title", caption="some text")
         row.figure(src="some_file.png", title="some title", caption="some text")
 
+    # The bare ``some_file.png`` resolves through the (unconfigured) singleton's
+    # figdir -> a shared "figures" directory, the same rule as doc.image / savefig.
     target = """
 | **some title** | **some title** | **some title** | **some title** |
 |:--------------:|:--------------:|:--------------:|:--------------:|
-| ![some_file.png](some_file.png) | ![some_file.png](some_file.png) | ![some_file.png](some_file.png) | ![some_file.png](some_file.png) |
+| ![figures/some_file.png](figures/some_file.png) | ![figures/some_file.png](figures/some_file.png) | ![figures/some_file.png](figures/some_file.png) | ![figures/some_file.png](figures/some_file.png) |
 | some text | some text | some text | some text |
 | **some title** | **some title** | **some title** | **some title** |
-| ![some_file.png](some_file.png) | ![some_file.png](some_file.png) | ![some_file.png](some_file.png) | ![some_file.png](some_file.png) |
+| ![figures/some_file.png](figures/some_file.png) | ![figures/some_file.png](figures/some_file.png) | ![figures/some_file.png](figures/some_file.png) | ![figures/some_file.png](figures/some_file.png) |
 | some text | some text | some text | some text |
 """[1:]
 

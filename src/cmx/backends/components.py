@@ -390,8 +390,12 @@ class FigureRow(Container):
         on_save = getattr(self._doc, "on_save", None)
         if on_save is None:
             return path
-        # Note: nested figure-row assets use the path as-is (no ``_resolve_asset``
-        # figdir placement) -- matching the historical behavior.
+        # Resolve bare names under the document's figdir (a slashed path still
+        # wins, used as-is) so figure-row assets land exactly where top-level
+        # ``doc.image`` / ``doc.savefig`` assets do -- one consistent figdir rule.
+        resolve = getattr(self._doc, "_resolve_asset", None)
+        if resolve is not None:
+            path = resolve(path)
         return on_save(data=data, path=path, kind=kind, dest=getattr(self._doc, "dest", None), doc=self._doc, **extra)
 
     def figure(self, image=None, src=None, title=None, caption=None, **kwargs):
@@ -418,7 +422,10 @@ class FigureRow(Container):
         self.titles.append(None if title is None else Bold(title))
         self.footers.append(None if caption is None else Span(caption))
         src = self._save(data=None, path=key, kind="figure", **kwargs)
-        self.children.append(Savefig(src, caption=caption))
+        # The row renders titles and captions in their own bands, so the image
+        # cell is just the figure -- passing ``caption`` here would render it a
+        # second time (inside Figure's nested table). Mirror ``figure`` above.
+        self.children.append(Savefig(src))
 
     @property
     def rows(self):
