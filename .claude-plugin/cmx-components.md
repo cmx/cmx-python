@@ -7,7 +7,7 @@ This skill provides detailed guidance on CMX's rich components for building docu
 - **Text**: prose via `@` / `|` / call forms
 - **Print**: `print`-style output, coalesced into code blocks
 - **Pre / YAML**: raw and YAML code blocks
-- **Table**: tabular data from DataFrames, CSV, or files
+- **Table**: tabular data from DataFrames, CSV, or files — or a figure grid via `table.figure_row()`
 - **Image**: array or file images, auto-saved through `on_save`
 - **Figure / Savefig**: images and matplotlib figures with titles/captions
 - **Video**: video and GIF embedding
@@ -100,6 +100,40 @@ doc.csv("Model,Accuracy\nResNet50,0.95\nVGG16,0.87")
 doc.table(file="data.csv")       # also .tsv / .json / .parquet / .xlsx / .yaml
 doc.table(file="metrics.parquet")
 ```
+
+### Figure grids — media tables with `figure_row`
+
+`doc.table()` with no data starts an empty table filled via
+`table.figure_row()`. Each figure row is one band of cells, rendered as up to
+three Markdown rows — **titles**, **cells**, **captions** — with unused bands
+dropped. Cell methods (one column each):
+
+```python
+with doc.table() as table:
+    for ep in ("0000", "0001", "0002"):
+        with table.figure_row() as row:
+            row.column(title="episode", text=f"`{ep}`")     # plain-text cell
+            row.figure(src=f"episodes/{ep}/frame.png",       # image cell
+                       title="first frame", caption="step 0")
+            row.video(src=f"episodes/{ep}/rollout.gif",      # media cell
+                      title="rollout")
+            # row.savefig("plot.png", ...) captures the current mpl figure
+```
+
+Rules that matter in practice:
+
+- **GIFs in cells, MP4s below the table.** A `.gif` src renders as a
+  single-line image link (table-safe). Any other extension renders as a
+  multi-line HTML5 `<video>` block that **breaks a Markdown table cell** —
+  embed it standalone with `doc.video(src="x.mp4")` after the table.
+- **Placeholder cells.** With only `src=` (no array/frames), the default
+  `on_save` does no I/O: the link renders without writing a file, so cells
+  can point at artifacts a pipeline has not produced yet — the report fills
+  in as files appear. Links resolve relative to the `.md` file.
+- **figdir rule applies**: bare names land under `figdir`; slashed paths are
+  used as-is.
+- src-only links need no extras; writing arrays through cells needs
+  `cmx[images]`.
 
 ## Image Component
 
@@ -250,6 +284,7 @@ doc.flush()
 ### Videos not playing
 
 - GIFs render as images and work everywhere; `.mp4`/`.webm` render as HTML5 `<video>` and show only where HTML is rendered.
+- Never put an `.mp4` in a `figure_row` cell — the multi-line `<video>` block breaks the Markdown table. Use a GIF preview in the cell and the MP4 in a standalone `doc.video` block.
 - Check file size and codec compatibility for MP4.
 
 ### Routing assets elsewhere (S3, a dashboard, ...)
