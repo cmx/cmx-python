@@ -136,7 +136,19 @@ See the [Development guide](https://cmx-python.readthedocs.io/en/latest/developm
 
 ## Claude Code plugin
 
-CMX ships a Claude Code plugin in [`.claude-plugin/`](.claude-plugin/) with skills that guide Claude through CMX's API and component usage when you work on a CMX project.
+CMX ships a Claude Code plugin with two skills that guide Claude through CMX's API and component usage when you work on a CMX project. To set it up, run inside Claude Code:
+
+```
+/plugin marketplace add cmx/cmx-python
+/plugin install cmx@cmx
+```
+
+Claude then loads the skills automatically whenever a task touches CMX; you can also invoke them directly:
+
+- `/cmx:cmx-basics` — configuration (`doc.config`, `figdir`), context managers, output methods, and lifecycle hooks
+- `/cmx:cmx-components` — tables and `figure_row` media grids, images, figures, videos, and troubleshooting
+
+The skill sources live in [`skills/`](skills/); plugin and marketplace metadata live in [`.claude-plugin/`](.claude-plugin/).
 
 ## Project structure
 
@@ -148,7 +160,8 @@ cmx-python/
 ├── docs/                # Sphinx + MyST documentation
 ├── examples/core/       # numbered tutorial examples
 ├── tests/               # pytest suite + golden-file harness
-├── .claude-plugin/      # Claude Code plugin
+├── skills/              # Claude Code plugin skills (SKILL.md per skill)
+├── .claude-plugin/      # Claude Code plugin + marketplace metadata
 ├── pyproject.toml       # project configuration
 └── Makefile             # build automation
 ```

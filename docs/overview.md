@@ -135,7 +135,14 @@ The tables and figures used here pull optional dependencies. See [Installation](
 
 ## Claude Code integration
 
-CMX ships a Claude Code plugin in the `.claude-plugin/` directory. When you work in this repository, Claude Code picks it up automatically and gains skills for CMX syntax, patterns, and components — so you can ask it to write scripts or explain behavior in natural language.
+CMX ships a Claude Code plugin with skills for CMX syntax, patterns, and components — so you can ask Claude to write scripts or explain behavior in natural language. Install it from inside Claude Code:
+
+```
+/plugin marketplace add cmx/cmx-python
+/plugin install cmx@cmx
+```
+
+The skills load automatically on CMX-related tasks, or invoke them directly with `/cmx:cmx-basics` and `/cmx:cmx-components`.
 
 ## Next steps
 

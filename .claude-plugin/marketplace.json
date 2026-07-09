@@ -1,8 +1,19 @@
 {
-  "marketplaceVisibility": "public",
-  "category": "development-tools",
-  "tags": ["documentation", "python", "markdown", "jupyter", "notebooks"],
-  "license": "MIT",
-  "repository": "https://github.com/cmx/cmx-python",
-  "documentation": "https://cmx-python.readthedocs.io"
+  "name": "cmx",
+  "owner": {
+    "name": "Ge Yang"
+  },
+  "description": "Claude Code skills for CMX -- live Markdown documents from Python scripts.",
+  "plugins": [
+    {
+      "name": "cmx",
+      "source": "./",
+      "description": "CMX - REPL with Python Scripts via live documents. Skills for CMX basics and rich components.",
+      "category": "development-tools",
+      "tags": ["documentation", "python", "markdown", "jupyter", "notebooks"],
+      "license": "MIT",
+      "repository": "https://github.com/cmx/cmx-python",
+      "homepage": "https://cmx-python.readthedocs.io"
+    }
+  ]
 }

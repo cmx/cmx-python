@@ -1,3 +1,8 @@
+---
+name: cmx-components
+description: Guide to CMX rich components — tables and figure_row media grids, images, figures, savefig, videos/GIFs, rows, and troubleshooting. Use when building CMX reports with tables, plots, or media.
+---
+
 # CMX Components Skill
 
 This skill provides detailed guidance on CMX's rich components for building documentation. CMX renders to **Markdown** (the backend), with partial HTML rendering for some components (rows, videos).

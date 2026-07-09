@@ -2,6 +2,17 @@
 
 All notable changes to CMX will be documented in this file.
 
+## [0.0.52] - 2026-07-08
+
+### Added
+
+- `figure_row` media tables documented in [Tables](tables.md) and pinned with tests: the three-band rendering (titles / cells / captions), the four cell methods (`column` / `figure` / `video` / `savefig`), GIF-in-cell vs MP4-below-the-table, placeholder (src-only) cells, and figdir resolution in figure rows.
+- A clear setup path for the Claude Code plugin: install with `/plugin marketplace add cmx/cmx-python` then `/plugin install cmx@cmx` (see the README).
+
+### Fixed
+
+- The Claude Code plugin now conforms to the plugin spec, so its skills actually load after install: skills moved to `skills/<name>/SKILL.md` with frontmatter (they were loose files under `.claude-plugin/`, which Claude Code does not discover), and `marketplace.json` rewritten to the real marketplace schema (`name` / `owner` / `plugins`).
+
 ## [0.0.51] - 2026-06-26
 
 ### Changed

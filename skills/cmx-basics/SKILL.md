@@ -1,3 +1,8 @@
+---
+name: cmx-basics
+description: Basic usage patterns and quick start guide for CMX — doc.config(__file__), figdir and asset resolution, with doc/hide/skip context managers, output methods, and lifecycle hooks. Use when writing or explaining CMX scripts.
+---
+
 # CMX Basics Skill
 
 This skill helps you understand and use CMX for creating live, interactive documentation from Python scripts.
