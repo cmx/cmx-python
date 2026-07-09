@@ -47,16 +47,16 @@ update-plugin:
 prepare: update-plugin
 	# Remove existing tags
 	git tag -d $(VERSION) || true
-	git tag -d latest || true
 	git push origin :refs/tags/$(VERSION) || true
-	git push origin :refs/tags/latest || true
 
+# Do NOT create a git tag named `latest`: Read the Docs treats a branch or tag
+# named `latest` as the "latest" docs version, shadowing its default behavior
+# of building `latest` from the default branch (main) on every push.
 release: prepare
 	git add -A
 	git commit -m "Release version $(VERSION)" || true
 	git push
 	git tag v$(VERSION) -m "$(msg)"
-	git tag latest -m "Latest release"
 	git push origin --tags
 
 publish-no-test: convert-rst wheel
