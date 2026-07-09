@@ -143,6 +143,8 @@ The HTML lands in `docs/_build/html/`.
    make release msg="Release version 0.0.48"
    ```
 
+Documentation deploys automatically: Read the Docs rebuilds [cmx.readthedocs.io](https://cmx.readthedocs.io) from `main` on every push, so the docs update as soon as the release lands. Do not create a branch or tag named `latest` — Read the Docs would build the `latest` docs from it instead of from `main`.
+
 :::{warning}
 `make publish` uploads to the live PyPI index. Run `make test` and verify the wheel locally with `make dev` before publishing.
 :::
