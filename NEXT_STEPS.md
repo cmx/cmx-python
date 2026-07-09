@@ -62,7 +62,7 @@ make preview
 5. Trigger a build
 6. Check that documentation builds successfully
 
-**Expected URL**: https://cmx-python.readthedocs.io
+**Expected URL**: https://cmx.readthedocs.io
 
 ### 2. Update Repository Settings
 

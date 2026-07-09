@@ -1,7 +1,7 @@
 # CMX
 
 [![PyPI version](https://badge.fury.io/py/cmx.svg)](https://badge.fury.io/py/cmx)
-[![Documentation Status](https://readthedocs.org/projects/cmx-python/badge/?version=latest)](https://cmx-python.readthedocs.io/en/latest/?badge=latest)
+[![Documentation Status](https://readthedocs.org/projects/cmx-python/badge/?version=latest)](https://cmx.readthedocs.io/en/latest/?badge=latest)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 Generate live Markdown documentation from Python scripts — you choose exactly what appears.
@@ -111,12 +111,12 @@ with doc:
 
 ## Documentation
 
-Full documentation: **https://cmx-python.readthedocs.io**
+Full documentation: **https://cmx.readthedocs.io**
 
-- [Get started](https://cmx-python.readthedocs.io/en/latest/overview.html) — the config → capture → flush workflow.
-- [Configuration](https://cmx-python.readthedocs.io/en/latest/configuration.html) — where Markdown and assets are written.
-- [Adding text](https://cmx-python.readthedocs.io/en/latest/markdown.html), [Tables](https://cmx-python.readthedocs.io/en/latest/tables.html), [Images](https://cmx-python.readthedocs.io/en/latest/images.html).
-- [API reference](https://cmx-python.readthedocs.io/en/latest/api/).
+- [Get started](https://cmx.readthedocs.io/en/latest/overview.html) — the config → capture → flush workflow.
+- [Configuration](https://cmx.readthedocs.io/en/latest/configuration.html) — where Markdown and assets are written.
+- [Adding text](https://cmx.readthedocs.io/en/latest/markdown.html), [Tables](https://cmx.readthedocs.io/en/latest/tables.html), [Images](https://cmx.readthedocs.io/en/latest/images.html).
+- [API reference](https://cmx.readthedocs.io/en/latest/api/).
 
 Runnable examples live in [`examples/core/`](examples/core/) — see its [README](examples/core/README.md).
 
@@ -132,7 +132,7 @@ make preview    # live-reload docs at http://localhost:8000
 make docs       # build the HTML docs
 ```
 
-See the [Development guide](https://cmx-python.readthedocs.io/en/latest/development.html) for the full workflow.
+See the [Development guide](https://cmx.readthedocs.io/en/latest/development.html) for the full workflow.
 
 ## Claude Code plugin
 
@@ -168,7 +168,7 @@ cmx-python/
 
 ## Contributing
 
-Contributions are welcome. See the [Development guide](https://cmx-python.readthedocs.io/en/latest/development.html) for setup, tests, and the publishing flow.
+Contributions are welcome. See the [Development guide](https://cmx.readthedocs.io/en/latest/development.html) for setup, tests, and the publishing flow.
 
 ## Authors
 
@@ -181,7 +181,7 @@ MIT — see [LICENSE](LICENSE).
 
 ## Links
 
-- **Documentation**: https://cmx-python.readthedocs.io
+- **Documentation**: https://cmx.readthedocs.io
 - **GitHub**: https://github.com/cmx/cmx-python
 - **PyPI**: https://pypi.org/project/cmx/
 - **Issues**: https://github.com/cmx/cmx-python/issues

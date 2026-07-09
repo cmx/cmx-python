@@ -145,18 +145,18 @@ it; variables it defines stay in scope:
 Documentation
 -------------
 
-Full documentation: **https://cmx-python.readthedocs.io**
+Full documentation: **https://cmx.readthedocs.io**
 
 - `Get
-  started <https://cmx-python.readthedocs.io/en/latest/overview.html>`__
+  started <https://cmx.readthedocs.io/en/latest/overview.html>`__
   — the config → capture → flush workflow.
-- `Configuration <https://cmx-python.readthedocs.io/en/latest/configuration.html>`__
+- `Configuration <https://cmx.readthedocs.io/en/latest/configuration.html>`__
   — where Markdown and assets are written.
 - `Adding
-  text <https://cmx-python.readthedocs.io/en/latest/markdown.html>`__,
-  `Tables <https://cmx-python.readthedocs.io/en/latest/tables.html>`__,
-  `Images <https://cmx-python.readthedocs.io/en/latest/images.html>`__.
-- `API reference <https://cmx-python.readthedocs.io/en/latest/api/>`__.
+  text <https://cmx.readthedocs.io/en/latest/markdown.html>`__,
+  `Tables <https://cmx.readthedocs.io/en/latest/tables.html>`__,
+  `Images <https://cmx.readthedocs.io/en/latest/images.html>`__.
+- `API reference <https://cmx.readthedocs.io/en/latest/api/>`__.
 
 Runnable examples live in ```examples/core/`` <examples/core/>`__ — see
 its `README <examples/core/README.md>`__.
@@ -175,7 +175,7 @@ Development
    make docs       # build the HTML docs
 
 See the `Development
-guide <https://cmx-python.readthedocs.io/en/latest/development.html>`__
+guide <https://cmx.readthedocs.io/en/latest/development.html>`__
 for the full workflow.
 
 Claude Code plugin
@@ -222,7 +222,7 @@ Contributing
 ------------
 
 Contributions are welcome. See the `Development
-guide <https://cmx-python.readthedocs.io/en/latest/development.html>`__
+guide <https://cmx.readthedocs.io/en/latest/development.html>`__
 for setup, tests, and the publishing flow.
 
 Authors
@@ -239,7 +239,7 @@ MIT — see `LICENSE <LICENSE>`__.
 Links
 -----
 
-- **Documentation**: https://cmx-python.readthedocs.io
+- **Documentation**: https://cmx.readthedocs.io
 - **GitHub**: https://github.com/cmx/cmx-python
 - **PyPI**: https://pypi.org/project/cmx/
 - **Issues**: https://github.com/cmx/cmx-python/issues
@@ -247,6 +247,6 @@ Links
 .. |PyPI version| image:: https://badge.fury.io/py/cmx.svg
    :target: https://badge.fury.io/py/cmx
 .. |Documentation Status| image:: https://readthedocs.org/projects/cmx-python/badge/?version=latest
-   :target: https://cmx-python.readthedocs.io/en/latest/?badge=latest
+   :target: https://cmx.readthedocs.io/en/latest/?badge=latest
 .. |License: MIT| image:: https://img.shields.io/badge/License-MIT-yellow.svg
    :target: https://opensource.org/licenses/MIT

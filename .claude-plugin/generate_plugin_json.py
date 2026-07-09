@@ -16,7 +16,7 @@ plugin = {
     "version": version,
     "description": "CMX - REPL with Python Scripts via live documents",
     "author": {"name": "Ge Yang"},
-    "homepage": "https://cmx-python.readthedocs.io",
+    "homepage": "https://cmx.readthedocs.io",
     "repository": "https://github.com/cmx/cmx-python",
     "license": "MIT",
     "keywords": ["documentation", "python", "markdown", "jupyter", "notebooks"],

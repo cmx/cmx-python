@@ -33,7 +33,7 @@ dependencies = []
 
 [project.urls]
 Homepage = "https://github.com/cmx/cmx-python"
-Documentation = "https://cmx-python.readthedocs.io"
+Documentation = "https://cmx.readthedocs.io"
 Repository = "https://github.com/cmx/cmx-python"
 Issues = "https://github.com/cmx/cmx-python/issues"
 

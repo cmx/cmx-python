@@ -298,6 +298,6 @@ doc.flush()
 
 ## Learn More
 
-- Full documentation: https://cmx-python.readthedocs.io
-- API Reference: https://cmx-python.readthedocs.io/en/latest/api/
+- Full documentation: https://cmx.readthedocs.io
+- API Reference: https://cmx.readthedocs.io/en/latest/api/
 - Component source: `src/cmx/backends/components.py`

@@ -246,7 +246,7 @@ The source code moved from root `cmx/` to `src/cmx/`, but this is transparent to
 ## Documentation Links
 
 Once published:
-- **Documentation**: https://cmx-python.readthedocs.io
+- **Documentation**: https://cmx.readthedocs.io
 - **PyPI**: https://pypi.org/project/cmx/
 - **GitHub**: https://github.com/cmx/cmx-python
 
